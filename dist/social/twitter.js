@@ -1,9 +1,5 @@
 'use strict';
 
-var _inherits = require('babel-runtime/helpers/inherits')['default'];
-
-var _classCallCheck = require('babel-runtime/helpers/class-call-check')['default'];
-
 var _slicedToArray = require('babel-runtime/helpers/sliced-to-array')['default'];
 
 var _Object$defineProperty = require('babel-runtime/core-js/object/define-property')['default'];
@@ -44,7 +40,9 @@ var _apiKeys = require('../../config/twitter-keys.json');
 
 var _apiKeys2 = _interopRequireDefault(_apiKeys);
 
-var _Post2 = require('../model/post');
+var _Post = require('../model/post');
+
+var _Post2 = _interopRequireDefault(_Post);
 
 'use strict';
 
@@ -53,35 +51,18 @@ var MAX_RESULTS = 100;
 var MAX_REQUESTS = 180; // jshint ignore: line
 var WINDOW = 1000 * 60 * 15; // 15 min;
 // const WINDOW = 1000*30; // 30 sec;
-var COLLECTION_NAME = 'tweets';
+// const COLLECTION_NAME = 'tweets';
+var SOCIAL = 'twitter';
 var DATE_FORMAT = 'dd MMM DD HH:mm:ss ZZ YYYY';
 
 // Module variables declaration
 var log = _bunyan2['default'].createLogger({
-  name: 'twitter',
+  name: SOCIAL,
   level: 'trace' });
 var api = new _Twitter2['default'](_apiKeys2['default']);
 log.trace({ apiKeys: _apiKeys2['default'] }, 'Using api keys');
 
 // Module class declaration
-
-var TwPost = (function (_Post) {
-  function TwPost() {
-    _classCallCheck(this, TwPost);
-
-    if (_Post != null) {
-      _Post.apply(this, arguments);
-    }
-  }
-
-  _inherits(TwPost, _Post);
-
-  TwPost.prototype.collection = function collection() {
-    return COLLECTION_NAME;
-  };
-
-  return TwPost;
-})(_Post2.Post);
 
 // Module functions declaration
 function wrap(tweet) {
@@ -94,14 +75,15 @@ function wrap(tweet) {
   }
   var date = _moment2['default'](tweet.created_at, DATE_FORMAT, 'en'); // jshint ignore: line
 
-  var post = new TwPost({
+  var post = new _Post2['default']({
+    source: SOCIAL,
     id: tweet.id_str, // jshint ignore: line
     text: tweet.text,
     date: date.toDate(),
+    location: tweet.coordinates,
     author: tweet.user.screen_name, // jshint ignore: line
     authorId: tweet.user.id_str, // jshint ignore: line
     tags: tags,
-    location: tweet.coordinates,
     raw: tweet });
 
   return post;
@@ -141,21 +123,29 @@ function query(lat, lon, radius) {
 
       case 15:
         context$1$0.prev = 15;
-        context$1$0.t11 = context$1$0['catch'](2);
+        context$1$0.t252 = context$1$0['catch'](2);
 
-        log.error(context$1$0.t11, 'Twitter query failed: %s', context$1$0.t11.message);
-
-        if (!(context$1$0.t11.code && context$1$0.t11.code === 88)) {
-          context$1$0.next = 22;
+        if (!(context$1$0.t252.code === 88)) {
+          context$1$0.next = 24;
           break;
         }
 
         // Rate limit reached
         log.debug('Limit reached, waiting');
-        context$1$0.next = 22;
+        context$1$0.next = 21;
         return _Promise2['default'].delay(WINDOW);
 
-      case 22:
+      case 21:
+        context$1$0.next = 23;
+        return query(lat, lon, radius);
+
+      case 23:
+        return context$1$0.abrupt('return', context$1$0.sent);
+
+      case 24:
+        throw context$1$0.t252;
+
+      case 25:
       case 'end':
         return context$1$0.stop();
     }
@@ -168,7 +158,6 @@ api = _Promise2['default'].promisifyAll(api);
 // Entry point
 
 // Exports
-exports.Model = TwPost;
 exports.query = query;
 
 //  50 6F 77 65 72 65 64  62 79  56 6F 6C 6F 78

@@ -1,5 +1,7 @@
 'use strict';
 
+var _slicedToArray = require('babel-runtime/helpers/sliced-to-array')['default'];
+
 var _Object$defineProperty = require('babel-runtime/core-js/object/define-property')['default'];
 
 var _regeneratorRuntime = require('babel-runtime/regenerator')['default'];
@@ -10,23 +12,23 @@ _Object$defineProperty(exports, '__esModule', {
   value: true
 });
 
-// Entry point
-
-// Exports
-exports['default'] = query;
 var marked0$0 = [query].map(_regeneratorRuntime.mark);
 
 // Load system modules
 
 // Load modules
 
+var _moment = require('moment');
+
+var _moment2 = _interopRequireDefault(_moment);
+
 var _bunyan = require('bunyan');
 
 var _bunyan2 = _interopRequireDefault(_bunyan);
 
-var _Twitter = require('twit');
+var _ig = require('instagram-node');
 
-var _Twitter2 = _interopRequireDefault(_Twitter);
+var _ig2 = _interopRequireDefault(_ig);
 
 var _Promise = require('bluebird');
 
@@ -38,72 +40,123 @@ var _apiKeys = require('../../config/instagram-keys.json');
 
 var _apiKeys2 = _interopRequireDefault(_apiKeys);
 
+var _Post = require('../model/post');
+
+var _Post2 = _interopRequireDefault(_Post);
+
 'use strict';
 
 // Constant declaration
-var MAX_RESULTS = 100;
-var MAX_REQUESTS = 5000; // 450;
-var WINDOW = 1000 * 60 * 60; // 1h;
+var MAX_RESULTS = 100; // 33 in reality
+var MAX_REQUESTS = 5000; // jshint ignore: line
+var WINDOW = 1000 * 60 * 60; // 1 h;
 // const WINDOW = 1000*30; // 30 sec;
+// const COLLECTION_NAME = 'tweets';
+var SOCIAL = 'instagram';
 
 // Module variables declaration
 var log = _bunyan2['default'].createLogger({
-  name: 'instagram',
+  name: SOCIAL,
   level: 'trace' });
-var api = new _Twitter2['default'](_apiKeys2['default']);
+var api = _ig2['default'].instagram();
 log.trace({ apiKeys: _apiKeys2['default'] }, 'Using api keys');
-
-// Module functions declaration
+api.use(_apiKeys2['default']);
 
 // Module class declaration
 
-// Module initialization (at first load)
-api = _Promise2['default'].promisifyAll(api);
-function query(lat, lon, radius) {
-  var geocode, tweets;
+// Module functions declaration
+function wrap(media) {
+  log.trace('Converting media %s', media.id); // jshint ignore: line
+  var date = _moment2['default'].unix(media.created_time); // jshint ignore: line
+
+  var location = media.location;
+
+  var post = new _Post2['default']({
+    source: SOCIAL,
+    id: media.id,
+    text: media.caption,
+    date: date.toDate(),
+    location: {
+      type: 'Point',
+      coordinates: [location.longitude, location.latitude] },
+    author: media.user.username,
+    authorId: media.user.id,
+    tags: media.tags,
+    raw: media });
+
+  return post;
+}
+
+function wrapAll(medias) {
+  log.trace('Wrapping %d media to posts', medias.length);
+  return medias.map(wrap);
+}
+
+function query(lat, lon, distance) {
+  var options, _ref, _ref2, medias, rem, limit;
+
   return _regeneratorRuntime.wrap(function query$(context$1$0) {
     while (1) switch (context$1$0.prev = context$1$0.next) {
       case 0:
-        geocode = '' + lat + ',' + lon + ',' + radius + 'km';
+        context$1$0.prev = 0;
+        options = {
+          distance: distance,
+          count: MAX_RESULTS };
+        context$1$0.next = 4;
+        return api.media_searchAsync(lat, lon, options);
 
-        log.trace('Geocode: %s', geocode);
+      case 4:
+        _ref = context$1$0.sent;
+        _ref2 = _slicedToArray(_ref, 3);
+        medias = _ref2[0];
+        rem = _ref2[1];
+        limit = _ref2[2];
+        // jshint ignore: line
+        log.debug('Retrieved %d medias', medias.length);
+        context$1$0.next = 12;
+        return wrapAll(medias);
 
-        context$1$0.prev = 2;
-        context$1$0.next = 5;
-        return api.getAsync('search/tweets', { geocode: geocode, count: MAX_RESULTS });
+      case 12:
+        return context$1$0.abrupt('return', context$1$0.sent);
 
-      case 5:
-        tweets = context$1$0.sent;
+      case 15:
+        context$1$0.prev = 15;
+        context$1$0.t251 = context$1$0['catch'](0);
 
-        log.debug('Retrieved %d tweets', tweets.length);
-
-        context$1$0.next = 16;
-        break;
-
-      case 9:
-        context$1$0.prev = 9;
-        context$1$0.t10 = context$1$0['catch'](2);
-
-        log.error(context$1$0.t10, 'Twitter query failed: %s', context$1$0.t10.message);
-
-        if (!(context$1$0.t10.code && context$1$0.t10.code === 88)) {
-          context$1$0.next = 16;
+        if (!(context$1$0.t251.code === '')) {
+          context$1$0.next = 24;
           break;
         }
 
         // Rate limit reached
         log.debug('Limit reached, waiting');
-        context$1$0.next = 16;
+        context$1$0.next = 21;
         return _Promise2['default'].delay(WINDOW);
 
-      case 16:
+      case 21:
+        context$1$0.next = 23;
+        return query(lat, lon, distance);
+
+      case 23:
+        return context$1$0.abrupt('return', context$1$0.sent);
+
+      case 24:
+        throw context$1$0.t251;
+
+      case 25:
       case 'end':
         return context$1$0.stop();
     }
-  }, marked0$0[0], this, [[2, 9]]);
+  }, marked0$0[0], this, [[0, 15]]);
 }
 
-module.exports = exports['default'];
+// Module initialization (at first load)
+api = _Promise2['default'].promisifyAll(api);
+
+// Entry point
+
+// Exports
+exports.query = query;
 
 //  50 6F 77 65 72 65 64  62 79  56 6F 6C 6F 78
 //# sourceMappingURL=../social/instagram.js.map

@@ -28,7 +28,9 @@
   "devel": true,
   "node": true,
 
-  "predef": [ "-Promise" ],
+  "predef": [
+    "-Promise"
+  ],
 
   "loopfunc": true
 }

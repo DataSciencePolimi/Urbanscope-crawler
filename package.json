@@ -13,12 +13,16 @@
     "prepublish": "gulp compile"
   },
   "dependencies": {
+    "babel-runtime": "5.x",
     "bluebird": "2.x",
     "bunyan": "1.x",
     "co": "4.x",
+    "instagram-node": "^0.5.7",
     "lodash": "3.x",
-    "mongorito": "^1.2.0",
+    "moment": "2.x",
+    "mongorito": "1.x",
     "node-geojson-grid": "0.x",
+    "systemjs": "^0.16.10",
     "twit": "1.x"
   },
   "devDependencies": {

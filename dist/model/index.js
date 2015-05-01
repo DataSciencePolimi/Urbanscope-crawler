@@ -10,7 +10,7 @@ _Object$defineProperty(exports, '__esModule', {
   value: true
 });
 
-var marked0$0 = [init].map(_regeneratorRuntime.mark);
+var marked0$0 = [open].map(_regeneratorRuntime.mark);
 
 // Load system modules
 
@@ -48,34 +48,60 @@ var log = _bunyan2['default'].createLogger({
   level: 'trace' });
 
 // Module functions declaration
-function init() {
-  return _regeneratorRuntime.wrap(function init$(context$1$0) {
+function open() {
+  var hostname, dbName, fullUrl;
+  return _regeneratorRuntime.wrap(function open$(context$1$0) {
     while (1) switch (context$1$0.prev = context$1$0.next) {
       case 0:
-        context$1$0.next = 2;
-        return _Post2['default'].index('id', { unique: true });
+        hostname = _config2['default'].url;
+        dbName = _config2['default'].database;
+        fullUrl = _url2['default'].resolve(hostname + '/', dbName);
 
-      case 2:
+        log.trace(fullUrl);
+        _Mongorito2['default'].connect(fullUrl);
+
+        context$1$0.next = 7;
+        return _Post2['default'].index('id', { index: true, unique: true });
+
+      case 7:
+        context$1$0.next = 9;
+        return _Post2['default'].index('date', { index: true });
+
+      case 9:
+        context$1$0.next = 11;
+        return _Post2['default'].index('author', { index: true });
+
+      case 11:
+        context$1$0.next = 13;
+        return _Post2['default'].index('authorId', { index: true });
+
+      case 13:
+        context$1$0.next = 15;
+        return _Post2['default'].index('source', { index: true });
+
+      case 15:
+        context$1$0.next = 17;
+        return _Post2['default'].index({ location: '2dsphere' });
+
+      case 17:
       case 'end':
         return context$1$0.stop();
     }
   }, marked0$0[0], this);
 }
+function close() {
+  _Mongorito2['default'].disconnect();
+}
 
 // Module class declaration
 
 // Module initialization (at first load)
-var hostname = _config2['default'].url;
-var dbName = _config2['default'].database;
-var fullUrl = _url2['default'].resolve(hostname + '/', dbName);
 
 // Entry point
-log.trace(fullUrl);
-_Mongorito2['default'].connect(fullUrl);
 
 // Exports
-exports['default'] = init;
+exports.open = open;
 
 //  50 6F 77 65 72 65 64  62 79  56 6F 6C 6F 78
-module.exports = exports['default'];
+exports.close = close;
 //# sourceMappingURL=../model/index.js.map

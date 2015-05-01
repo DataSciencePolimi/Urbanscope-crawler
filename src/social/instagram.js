@@ -2,31 +2,92 @@
 // Load system modules
 
 // Load modules
+import moment from 'moment';
 import bunyan from 'bunyan';
-import Twitter from 'twit';
+import ig from 'instagram-node';
 import Promise from 'bluebird';
 
 // Load my modules
 import apiKeys from '../../config/instagram-keys.json';
+import Post from '../model/post';
+
 
 // Constant declaration
-const MAX_RESULTS = 100;
-const MAX_REQUESTS = 5000; // 450;
-const WINDOW = 1000*60*60; // 1h;
+const MAX_RESULTS = 100; // 33 in reality
+const MAX_REQUESTS = 5000; // jshint ignore: line
+const WINDOW = 1000*60*60; // 1 h;
 // const WINDOW = 1000*30; // 30 sec;
+// const COLLECTION_NAME = 'tweets';
+const SOCIAL = 'instagram';
 
 
 // Module variables declaration
 let log = bunyan.createLogger( {
-  name: 'instagram',
+  name: SOCIAL,
   level: 'trace',
 } );
-let api = new Twitter( apiKeys );
+let api = ig.instagram();
 log.trace( { apiKeys }, 'Using api keys' );
+api.use( apiKeys );
 
-// Module functions declaration
+
 
 // Module class declaration
+
+
+// Module functions declaration
+function wrap( media ) {
+  log.trace( 'Converting media %s', media.id ); // jshint ignore: line
+  let date = moment.unix( media.created_time ); // jshint ignore: line
+
+  let location = media.location;
+
+  let post = new Post( {
+    source: SOCIAL,
+    id: media.id,
+    text: media.caption,
+    date: date.toDate(),
+    location: {
+      type: 'Point',
+      coordinates: [ location.longitude, location.latitude ],
+    },
+    author: media.user.username,
+    authorId: media.user.id,
+    tags: media.tags,
+    raw: media,
+  } );
+
+  return post;
+}
+
+
+
+function wrapAll( medias ) {
+  log.trace( 'Wrapping %d media to posts', medias.length );
+  return medias.map( wrap );
+}
+
+
+function* query( lat, lon, distance ) {
+  try {
+    let options = {
+      distance,
+      count: MAX_RESULTS,
+    };
+    let [ medias, rem, limit ] = yield api.media_searchAsync( lat, lon, options ); // jshint ignore: line
+    log.debug( 'Retrieved %d medias', medias.length );
+    return yield wrapAll( medias );
+  } catch( err ) {
+    if( err.code==='' ) { // Rate limit reached
+      log.debug( 'Limit reached, waiting' );
+      yield Promise.delay( WINDOW );
+      return yield query( lat, lon, distance );
+    }
+
+    throw err;
+  }
+}
+
 
 // Module initialization (at first load)
 api = Promise.promisifyAll( api );
@@ -35,22 +96,6 @@ api = Promise.promisifyAll( api );
 // Entry point
 
 // Exports
-export default function* query( lat, lon, radius ) {
-  let geocode = `${lat},${lon},${radius}km`;
-  log.trace( 'Geocode: %s', geocode );
-
-  try {
-    let tweets = yield api.getAsync( 'search/tweets', { geocode, count: MAX_RESULTS } );
-    log.debug( 'Retrieved %d tweets', tweets.length );
-
-  } catch( err ) {
-    log.error( err, 'Twitter query failed: %s', err.message );
-
-    if( err.code && err.code===88 ) { // Rate limit reached
-      log.debug( 'Limit reached, waiting' );
-      yield Promise.delay( WINDOW );
-    }
-  }
-}
+export { query };
 
 //  50 6F 77 65 72 65 64  62 79  56 6F 6C 6F 78

@@ -21,25 +21,34 @@ let log = bunyan.createLogger( {
 
 
 // Module functions declaration
-function* init() {
+function* open() {
+  let hostname = config.url;
+  let dbName = config.database;
+  let fullUrl = url.resolve( hostname+'/', dbName );
 
-  yield Post.index( 'id', { unique: true } );
+  log.trace( fullUrl );
+  Mongorito.connect( fullUrl );
+
+  yield Post.index( 'id', { index: true, unique: true } );
+  yield Post.index( 'date', { index: true } );
+  yield Post.index( 'author', { index: true } );
+  yield Post.index( 'authorId', { index: true } );
+  yield Post.index( 'source', { index: true } );
+  yield Post.index( { location: '2dsphere' } );
+}
+function close() {
+  Mongorito.disconnect();
 }
 
 // Module class declaration
 
 
 // Module initialization (at first load)
-let hostname = config.url;
-let dbName = config.database;
-let fullUrl = url.resolve( hostname+'/', dbName );
 
 // Entry point
-log.trace( fullUrl );
-Mongorito.connect( fullUrl );
 
 // Exports
-export default init;
+export { open, close };
 
 
 //  50 6F 77 65 72 65 64  62 79  56 6F 6C 6F 78
