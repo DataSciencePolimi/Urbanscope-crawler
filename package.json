@@ -1,0 +1,29 @@
+{
+  "name": "UrbanScope",
+  "version": "0.1.0",
+  "description": "UrbanScope Twitter Crawler",
+  "main": "crawler.js",
+  "author": "Volox",
+  "license": "MIT",
+  "scripts": {
+    "twitter": "node crawler.js twitter",
+    "instagram": "node crawler.js instagram",
+    "compile": "gulp compile",
+    "watch": "gulp watch",
+    "prepublish": "gulp compile"
+  },
+  "dependencies": {
+    "bluebird": "2.x",
+    "bunyan": "1.x",
+    "co": "4.x",
+    "lodash": "3.x",
+    "mongorito": "^1.2.0",
+    "node-geojson-grid": "0.x",
+    "twit": "1.x"
+  },
+  "devDependencies": {
+    "gulp": "3.x",
+    "gulp-babel": "5.x",
+    "gulp-sourcemaps": "1.x"
+  }
+}
