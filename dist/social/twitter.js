@@ -26,23 +26,19 @@ var _bunyan = require('bunyan');
 
 var _bunyan2 = _interopRequireDefault(_bunyan);
 
-var _Twitter = require('twit');
+var _twit = require('twit');
 
-var _Twitter2 = _interopRequireDefault(_Twitter);
+var _twit2 = _interopRequireDefault(_twit);
 
-var _Promise = require('bluebird');
+var _bluebird = require('bluebird');
 
-var _Promise2 = _interopRequireDefault(_Promise);
+var _bluebird2 = _interopRequireDefault(_bluebird);
 
 // Load my modules
 
-var _apiKeys = require('../../config/twitter-keys.json');
+var _configTwitterKeysJson = require('../../config/twitter-keys.json');
 
-var _apiKeys2 = _interopRequireDefault(_apiKeys);
-
-var _Post = require('../model/post');
-
-var _Post2 = _interopRequireDefault(_Post);
+var _configTwitterKeysJson2 = _interopRequireDefault(_configTwitterKeysJson);
 
 'use strict';
 
@@ -59,8 +55,8 @@ var DATE_FORMAT = 'dd MMM DD HH:mm:ss ZZ YYYY';
 var log = _bunyan2['default'].createLogger({
   name: SOCIAL,
   level: 'trace' });
-var api = new _Twitter2['default'](_apiKeys2['default']);
-log.trace({ apiKeys: _apiKeys2['default'] }, 'Using api keys');
+var api = new _twit2['default'](_configTwitterKeysJson2['default']);
+log.trace({ apiKeys: _configTwitterKeysJson2['default'] }, 'Using api keys');
 
 // Module class declaration
 
@@ -75,7 +71,7 @@ function wrap(tweet) {
   }
   var date = _moment2['default'](tweet.created_at, DATE_FORMAT, 'en'); // jshint ignore: line
 
-  var post = new _Post2['default']({
+  var post = {
     source: SOCIAL,
     id: tweet.id_str, // jshint ignore: line
     text: tweet.text,
@@ -84,14 +80,19 @@ function wrap(tweet) {
     author: tweet.user.screen_name, // jshint ignore: line
     authorId: tweet.user.id_str, // jshint ignore: line
     tags: tags,
-    raw: tweet });
+    lang: tweet.lang,
+    raw: tweet };
 
   return post;
 }
 
 function wrapAll(tweets) {
   log.trace('Wrapping %d tweets to posts', tweets.length);
-  return tweets.map(wrap);
+  var wrapped = tweets.map(wrap);
+  var filtered = wrapped.filter(function (t) {
+    return t.location;
+  });
+  return filtered;
 }
 
 function query(lat, lon, radius) {
@@ -115,45 +116,41 @@ function query(lat, lon, radius) {
         tweets = data.statuses;
 
         log.debug('Retrieved %d tweets', tweets.length);
-        context$1$0.next = 12;
-        return wrapAll(tweets);
+        return context$1$0.abrupt('return', wrapAll(tweets));
 
-      case 12:
-        return context$1$0.abrupt('return', context$1$0.sent);
+      case 13:
+        context$1$0.prev = 13;
+        context$1$0.t5 = context$1$0['catch'](2);
 
-      case 15:
-        context$1$0.prev = 15;
-        context$1$0.t252 = context$1$0['catch'](2);
-
-        if (!(context$1$0.t252.code === 88)) {
-          context$1$0.next = 24;
+        if (!(context$1$0.t5.code === 88)) {
+          context$1$0.next = 22;
           break;
         }
 
         // Rate limit reached
         log.debug('Limit reached, waiting');
-        context$1$0.next = 21;
-        return _Promise2['default'].delay(WINDOW);
+        context$1$0.next = 19;
+        return _bluebird2['default'].delay(WINDOW);
 
-      case 21:
-        context$1$0.next = 23;
+      case 19:
+        context$1$0.next = 21;
         return query(lat, lon, radius);
 
-      case 23:
+      case 21:
         return context$1$0.abrupt('return', context$1$0.sent);
 
-      case 24:
-        throw context$1$0.t252;
+      case 22:
+        throw context$1$0.t5;
 
-      case 25:
+      case 23:
       case 'end':
         return context$1$0.stop();
     }
-  }, marked0$0[0], this, [[2, 15]]);
+  }, marked0$0[0], this, [[2, 13]]);
 }
 
 // Module initialization (at first load)
-api = _Promise2['default'].promisifyAll(api);
+api = _bluebird2['default'].promisifyAll(api);
 
 // Entry point
 

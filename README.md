@@ -1,3 +1,3 @@
-# UrbanScope Twitter Crawler
+# UrbanScope Crawler
 
 ## Crawler

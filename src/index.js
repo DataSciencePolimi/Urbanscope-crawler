@@ -4,13 +4,14 @@
 // Load modules
 import co from 'co';
 import bunyan from 'bunyan';
+import turf from 'turf';
 import grid from 'node-geojson-grid';
 
 // Load my modules
+import Post from './model/post';
 import { open as openMongo, close as closeMongo } from './model/';
 import gridConfig from '../config/grid-config.json';
-// import { query as twQuery } from './social/twitter';
-// import { query as igQuery } from './social/instagram';
+import nils from '../config/nils.json';
 
 
 // Constant declaration
@@ -25,10 +26,24 @@ let log = bunyan.createLogger( {
 
 // Module functions declaration
 function* savePosts( posts ) {
-  for( let post of posts ) {
+  let points = turf.featurecollection( posts.map( (p,index) => {
+    return turf.point( p.location.coordinates, { index } );
+  } ) );
+
+  let taggedPoints = turf.tag( points, nils, 'ID_NIL', 'nil' );
+
+  for( let point of taggedPoints.features ) {
     try {
-      log.trace( 'Saving post %s', post.get( 'id' ) );
+      let { index, nil } = point.properties;
+      let rawPost = posts[ index ];
+
+      // Set the nil
+      rawPost.nil = nil;
+
+      // Create and save the post
+      let post = new Post( rawPost );
       yield post.save();
+
     } catch( err ) {
       if( err.code===11000 ) {
         log.error( 'Post already present' );
@@ -61,13 +76,6 @@ co( function*() {
   // Load social
   let social = process.argv[ 2 ];
   log.trace( 'Loading module "%s"', social );
-  /*
-  let socialMap = {
-    twitter: twQuery,
-    instagram: igQuery,
-  };
-  let query = socialMap[ social ];
-  */
   let { query } = require( './social/'+social );
 
   // Cycle over the grids

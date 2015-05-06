@@ -1,7 +1,7 @@
 {
-  "name": "UrbanScope",
+  "name": "UrbanScopeCrawler",
   "version": "0.1.0",
-  "description": "UrbanScope Twitter Crawler",
+  "description": "UrbanScope Crawler",
   "main": "crawler.js",
   "author": "Volox",
   "license": "MIT",
@@ -17,12 +17,12 @@
     "bluebird": "2.x",
     "bunyan": "1.x",
     "co": "4.x",
-    "instagram-node": "^0.5.7",
+    "instagram-node": "0.5.x",
     "lodash": "3.x",
     "moment": "2.x",
     "mongorito": "1.x",
     "node-geojson-grid": "0.x",
-    "systemjs": "^0.16.10",
+    "turf": "2.x",
     "twit": "1.x"
   },
   "devDependencies": {

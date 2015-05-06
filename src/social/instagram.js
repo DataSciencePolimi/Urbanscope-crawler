@@ -9,7 +9,7 @@ import Promise from 'bluebird';
 
 // Load my modules
 import apiKeys from '../../config/instagram-keys.json';
-import Post from '../model/post';
+
 
 
 // Constant declaration
@@ -42,20 +42,20 @@ function wrap( media ) {
 
   let location = media.location;
 
-  let post = new Post( {
+  let post = {
     source: SOCIAL,
     id: media.id,
     text: media.caption,
     date: date.toDate(),
-    location: {
+    location: location? {
       type: 'Point',
       coordinates: [ location.longitude, location.latitude ],
-    },
+    } : null,
     author: media.user.username,
     authorId: media.user.id,
     tags: media.tags,
     raw: media,
-  } );
+  };
 
   return post;
 }
@@ -64,7 +64,9 @@ function wrap( media ) {
 
 function wrapAll( medias ) {
   log.trace( 'Wrapping %d media to posts', medias.length );
-  return medias.map( wrap );
+  let wrapped = medias.map( wrap );
+  let filtered = wrapped.filter( t => t.location );
+  return filtered;
 }
 
 

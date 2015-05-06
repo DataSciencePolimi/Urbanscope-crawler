@@ -24,19 +24,19 @@ var _bunyan = require('bunyan');
 
 var _bunyan2 = _interopRequireDefault(_bunyan);
 
-var _Mongorito = require('mongorito');
+var _mongorito = require('mongorito');
 
-var _Mongorito2 = _interopRequireDefault(_Mongorito);
+var _mongorito2 = _interopRequireDefault(_mongorito);
 
 // Load my modules
 
-var _Post = require('./post');
+var _post = require('./post');
 
-var _Post2 = _interopRequireDefault(_Post);
+var _post2 = _interopRequireDefault(_post);
 
-var _config = require('../../config/mongo.json');
+var _configMongoJson = require('../../config/mongo.json');
 
-var _config2 = _interopRequireDefault(_config);
+var _configMongoJson2 = _interopRequireDefault(_configMongoJson);
 
 'use strict';
 
@@ -53,35 +53,35 @@ function open() {
   return _regeneratorRuntime.wrap(function open$(context$1$0) {
     while (1) switch (context$1$0.prev = context$1$0.next) {
       case 0:
-        hostname = _config2['default'].url;
-        dbName = _config2['default'].database;
+        hostname = _configMongoJson2['default'].url;
+        dbName = _configMongoJson2['default'].database;
         fullUrl = _url2['default'].resolve(hostname + '/', dbName);
 
         log.trace(fullUrl);
-        _Mongorito2['default'].connect(fullUrl);
+        _mongorito2['default'].connect(fullUrl);
 
         context$1$0.next = 7;
-        return _Post2['default'].index('id', { index: true, unique: true });
+        return _post2['default'].index('id', { index: true, unique: true });
 
       case 7:
         context$1$0.next = 9;
-        return _Post2['default'].index('date', { index: true });
+        return _post2['default'].index('date', { index: true });
 
       case 9:
         context$1$0.next = 11;
-        return _Post2['default'].index('author', { index: true });
+        return _post2['default'].index('author', { index: true });
 
       case 11:
         context$1$0.next = 13;
-        return _Post2['default'].index('authorId', { index: true });
+        return _post2['default'].index('authorId', { index: true });
 
       case 13:
         context$1$0.next = 15;
-        return _Post2['default'].index('source', { index: true });
+        return _post2['default'].index('source', { index: true });
 
       case 15:
         context$1$0.next = 17;
-        return _Post2['default'].index({ location: '2dsphere' });
+        return _post2['default'].index({ location: '2dsphere' });
 
       case 17:
       case 'end':
@@ -90,7 +90,7 @@ function open() {
   }, marked0$0[0], this);
 }
 function close() {
-  _Mongorito2['default'].disconnect();
+  _mongorito2['default'].disconnect();
 }
 
 // Module class declaration

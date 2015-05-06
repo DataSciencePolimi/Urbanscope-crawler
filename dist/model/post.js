@@ -16,9 +16,9 @@ _Object$defineProperty(exports, '__esModule', {
 
 // Load modules
 
-var _Mongorito = require('mongorito');
+var _mongorito = require('mongorito');
 
-var _Mongorito2 = _interopRequireDefault(_Mongorito);
+var _mongorito2 = _interopRequireDefault(_mongorito);
 
 'use strict';
 
@@ -27,7 +27,7 @@ var _Mongorito2 = _interopRequireDefault(_Mongorito);
 // Constant declaration
 
 // Module variables declaration
-var Model = _Mongorito2['default'].Model;
+var Model = _mongorito2['default'].Model;
 
 // Module class declaration
 

@@ -20,21 +20,31 @@ var _bunyan = require('bunyan');
 
 var _bunyan2 = _interopRequireDefault(_bunyan);
 
-var _grid = require('node-geojson-grid');
+var _turf = require('turf');
 
-var _grid2 = _interopRequireDefault(_grid);
+var _turf2 = _interopRequireDefault(_turf);
+
+var _nodeGeojsonGrid = require('node-geojson-grid');
+
+var _nodeGeojsonGrid2 = _interopRequireDefault(_nodeGeojsonGrid);
 
 // Load my modules
 
-var _openMongo$closeMongo = require('./model/');
+var _modelPost = require('./model/post');
 
-var _gridConfig = require('../config/grid-config.json');
+var _modelPost2 = _interopRequireDefault(_modelPost);
 
-var _gridConfig2 = _interopRequireDefault(_gridConfig);
+var _model = require('./model/');
+
+var _configGridConfigJson = require('../config/grid-config.json');
+
+var _configGridConfigJson2 = _interopRequireDefault(_configGridConfigJson);
+
+var _configNilsJson = require('../config/nils.json');
+
+var _configNilsJson2 = _interopRequireDefault(_configNilsJson);
 
 'use strict';
-// import { query as twQuery } from './social/twitter';
-// import { query as igQuery } from './social/instagram';
 
 // Constant declaration
 
@@ -45,88 +55,99 @@ var log = _bunyan2['default'].createLogger({
 
 // Module functions declaration
 function savePosts(posts) {
-  var _iteratorNormalCompletion, _didIteratorError, _iteratorError, _iterator, _step, post;
+  var points, taggedPoints, _iteratorNormalCompletion, _didIteratorError, _iteratorError, _iterator, _step, point, _point$properties, index, nil, rawPost, post;
 
   return _regeneratorRuntime.wrap(function savePosts$(context$1$0) {
     while (1) switch (context$1$0.prev = context$1$0.next) {
       case 0:
+        points = _turf2['default'].featurecollection(posts.map(function (p, index) {
+          return _turf2['default'].point(p.location.coordinates, { index: index });
+        }));
+        taggedPoints = _turf2['default'].tag(points, _configNilsJson2['default'], 'ID_NIL', 'nil');
         _iteratorNormalCompletion = true;
         _didIteratorError = false;
         _iteratorError = undefined;
-        context$1$0.prev = 3;
-        _iterator = _getIterator(posts);
+        context$1$0.prev = 5;
+        _iterator = _getIterator(taggedPoints.features);
 
-      case 5:
+      case 7:
         if (_iteratorNormalCompletion = (_step = _iterator.next()).done) {
-          context$1$0.next = 19;
+          context$1$0.next = 26;
           break;
         }
 
-        post = _step.value;
-        context$1$0.prev = 7;
+        point = _step.value;
+        context$1$0.prev = 9;
+        _point$properties = point.properties;
+        index = _point$properties.index;
+        nil = _point$properties.nil;
+        rawPost = posts[index];
 
-        log.trace('Saving post %s', post.get('id'));
-        context$1$0.next = 11;
+        // Set the nil
+        rawPost.nil = nil;
+
+        post = new _modelPost2['default'](rawPost);
+        context$1$0.next = 18;
         return post.save();
 
-      case 11:
-        context$1$0.next = 16;
+      case 18:
+        context$1$0.next = 23;
         break;
 
-      case 13:
-        context$1$0.prev = 13;
-        context$1$0.t247 = context$1$0['catch'](7);
+      case 20:
+        context$1$0.prev = 20;
+        context$1$0.t0 = context$1$0['catch'](9);
 
-        if (context$1$0.t247.code === 11000) {
+        if (context$1$0.t0.code === 11000) {
           log.error('Post already present');
         } else {
-          log.error(context$1$0.t247, 'Cannot insert post');
+          log.error(context$1$0.t0, 'Cannot insert post');
         }
 
-      case 16:
+      case 23:
         _iteratorNormalCompletion = true;
-        context$1$0.next = 5;
+        context$1$0.next = 7;
         break;
 
-      case 19:
-        context$1$0.next = 25;
+      case 26:
+        context$1$0.next = 32;
         break;
 
-      case 21:
-        context$1$0.prev = 21;
-        context$1$0.t248 = context$1$0['catch'](3);
+      case 28:
+        context$1$0.prev = 28;
+        context$1$0.t1 = context$1$0['catch'](5);
         _didIteratorError = true;
-        _iteratorError = context$1$0.t248;
+        _iteratorError = context$1$0.t1;
 
-      case 25:
-        context$1$0.prev = 25;
-        context$1$0.prev = 26;
+      case 32:
+        context$1$0.prev = 32;
+        context$1$0.prev = 33;
 
         if (!_iteratorNormalCompletion && _iterator['return']) {
           _iterator['return']();
         }
 
-      case 28:
-        context$1$0.prev = 28;
+      case 35:
+        context$1$0.prev = 35;
 
         if (!_didIteratorError) {
-          context$1$0.next = 31;
+          context$1$0.next = 38;
           break;
         }
 
         throw _iteratorError;
 
-      case 31:
-        return context$1$0.finish(28);
+      case 38:
+        return context$1$0.finish(35);
 
-      case 32:
-        return context$1$0.finish(25);
+      case 39:
+        return context$1$0.finish(32);
 
-      case 33:
+      case 40:
       case 'end':
         return context$1$0.stop();
     }
-  }, marked0$0[0], this, [[3, 21, 25, 33], [7, 13], [26,, 28, 32]]);
+  }, marked0$0[0], this, [[5, 28, 32, 40], [9, 20], [33,, 35, 39]]);
 }
 
 // Module class declaration
@@ -141,13 +162,13 @@ _co2['default'](_regeneratorRuntime.mark(function callee$0$0() {
     while (1) switch (context$1$0.prev = context$1$0.next) {
       case 0:
         context$1$0.next = 2;
-        return _openMongo$closeMongo.open();
+        return _model.open();
 
       case 2:
 
         // Create the grid points
         log.debug('Generating point grids');
-        fc = _grid2['default'].json(_gridConfig2['default']);
+        fc = _nodeGeojsonGrid2['default'].json(_configGridConfigJson2['default']);
         grids = fc.features.map(function (f) {
           return f.geometry.coordinates;
         });
@@ -162,12 +183,12 @@ _co2['default'](_regeneratorRuntime.mark(function callee$0$0() {
         idx = 0;
 
       case 11:
-        if (!(idx < _gridConfig2['default'].length)) {
+        if (!(idx < _configGridConfigJson2['default'].length)) {
           context$1$0.next = 59;
           break;
         }
 
-        currentMpp = _gridConfig2['default'][idx].mpp;
+        currentMpp = _configGridConfigJson2['default'][idx].mpp;
         points = grids[idx];
 
         log.debug('Current grid %d with %d points', idx, points.length);
@@ -206,13 +227,13 @@ _co2['default'](_regeneratorRuntime.mark(function callee$0$0() {
 
       case 34:
         context$1$0.prev = 34;
-        context$1$0.t249 = context$1$0['catch'](25);
+        context$1$0.t2 = context$1$0['catch'](25);
 
-        if (context$1$0.t249.code === 'ECONNREFUSED') {
-          log.error('Cannot connect %s', context$1$0.t249.message);
+        if (context$1$0.t2.code === 'ECONNREFUSED') {
+          log.error('Cannot connect %s', context$1$0.t2.message);
         }
 
-        log.error(context$1$0.t249, 'Query failed: %s', context$1$0.t249.message);
+        log.error(context$1$0.t2, 'Query failed: %s', context$1$0.t2.message);
 
       case 38:
         _iteratorNormalCompletion2 = true;
@@ -225,9 +246,9 @@ _co2['default'](_regeneratorRuntime.mark(function callee$0$0() {
 
       case 43:
         context$1$0.prev = 43;
-        context$1$0.t250 = context$1$0['catch'](18);
+        context$1$0.t3 = context$1$0['catch'](18);
         _didIteratorError2 = true;
-        _iteratorError2 = context$1$0.t250;
+        _iteratorError2 = context$1$0.t3;
 
       case 47:
         context$1$0.prev = 47;
@@ -272,21 +293,15 @@ _co2['default'](_regeneratorRuntime.mark(function callee$0$0() {
 }))['catch'](function (err) {
   log.fatal(err, 'NUOOOOOOOOO');
 }).then(function () {
-  _openMongo$closeMongo.close();
+  _model.close();
   log.info('Bye');
 });
 
 //  50 6F 77 65 72 65 64  62 79  56 6F 6C 6F 78
+// Create and save the post
 
 // Setup mongo
 // Load social
-/*
-let socialMap = {
-  twitter: twQuery,
-  instagram: igQuery,
-};
-let query = socialMap[ social ];
-*/
 
 // Cycle over the grids
 //# sourceMappingURL=index.js.map

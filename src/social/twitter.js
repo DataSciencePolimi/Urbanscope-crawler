@@ -9,7 +9,6 @@ import Promise from 'bluebird';
 
 // Load my modules
 import apiKeys from '../../config/twitter-keys.json';
-import Post from '../model/post';
 
 
 // Constant declaration
@@ -44,7 +43,7 @@ function wrap( tweet ) {
   }
   let date = moment( tweet.created_at, DATE_FORMAT, 'en' ); // jshint ignore: line
 
-  let post = new Post( {
+  let post = {
     source: SOCIAL,
     id: tweet.id_str, // jshint ignore: line
     text: tweet.text,
@@ -53,8 +52,9 @@ function wrap( tweet ) {
     author: tweet.user.screen_name, // jshint ignore: line
     authorId: tweet.user.id_str, // jshint ignore: line
     tags: tags,
+    lang: tweet.lang,
     raw: tweet,
-  } );
+  };
 
   return post;
 }
@@ -63,7 +63,9 @@ function wrap( tweet ) {
 
 function wrapAll( tweets ) {
   log.trace( 'Wrapping %d tweets to posts', tweets.length );
-  return tweets.map( wrap );
+  let wrapped = tweets.map( wrap );
+  let filtered = wrapped.filter( t => t.location );
+  return filtered;
 }
 
 
@@ -75,7 +77,7 @@ function* query( lat, lon, radius ) {
     let [ data ] = yield api.getAsync( 'search/tweets', { geocode, count: MAX_RESULTS } );
     let tweets = data.statuses;
     log.debug( 'Retrieved %d tweets', tweets.length );
-    return yield wrapAll( tweets );
+    return wrapAll( tweets );
   } catch( err ) {
     if( err.code===88 ) { // Rate limit reached
       log.debug( 'Limit reached, waiting' );

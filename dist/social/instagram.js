@@ -26,23 +26,19 @@ var _bunyan = require('bunyan');
 
 var _bunyan2 = _interopRequireDefault(_bunyan);
 
-var _ig = require('instagram-node');
+var _instagramNode = require('instagram-node');
 
-var _ig2 = _interopRequireDefault(_ig);
+var _instagramNode2 = _interopRequireDefault(_instagramNode);
 
-var _Promise = require('bluebird');
+var _bluebird = require('bluebird');
 
-var _Promise2 = _interopRequireDefault(_Promise);
+var _bluebird2 = _interopRequireDefault(_bluebird);
 
 // Load my modules
 
-var _apiKeys = require('../../config/instagram-keys.json');
+var _configInstagramKeysJson = require('../../config/instagram-keys.json');
 
-var _apiKeys2 = _interopRequireDefault(_apiKeys);
-
-var _Post = require('../model/post');
-
-var _Post2 = _interopRequireDefault(_Post);
+var _configInstagramKeysJson2 = _interopRequireDefault(_configInstagramKeysJson);
 
 'use strict';
 
@@ -58,9 +54,9 @@ var SOCIAL = 'instagram';
 var log = _bunyan2['default'].createLogger({
   name: SOCIAL,
   level: 'trace' });
-var api = _ig2['default'].instagram();
-log.trace({ apiKeys: _apiKeys2['default'] }, 'Using api keys');
-api.use(_apiKeys2['default']);
+var api = _instagramNode2['default'].instagram();
+log.trace({ apiKeys: _configInstagramKeysJson2['default'] }, 'Using api keys');
+api.use(_configInstagramKeysJson2['default']);
 
 // Module class declaration
 
@@ -71,25 +67,29 @@ function wrap(media) {
 
   var location = media.location;
 
-  var post = new _Post2['default']({
+  var post = {
     source: SOCIAL,
     id: media.id,
     text: media.caption,
     date: date.toDate(),
-    location: {
+    location: location ? {
       type: 'Point',
-      coordinates: [location.longitude, location.latitude] },
+      coordinates: [location.longitude, location.latitude] } : null,
     author: media.user.username,
     authorId: media.user.id,
     tags: media.tags,
-    raw: media });
+    raw: media };
 
   return post;
 }
 
 function wrapAll(medias) {
   log.trace('Wrapping %d media to posts', medias.length);
-  return medias.map(wrap);
+  var wrapped = medias.map(wrap);
+  var filtered = wrapped.filter(function (t) {
+    return t.location;
+  });
+  return filtered;
 }
 
 function query(lat, lon, distance) {
@@ -121,9 +121,9 @@ function query(lat, lon, distance) {
 
       case 15:
         context$1$0.prev = 15;
-        context$1$0.t251 = context$1$0['catch'](0);
+        context$1$0.t4 = context$1$0['catch'](0);
 
-        if (!(context$1$0.t251.code === '')) {
+        if (!(context$1$0.t4.code === '')) {
           context$1$0.next = 24;
           break;
         }
@@ -131,7 +131,7 @@ function query(lat, lon, distance) {
         // Rate limit reached
         log.debug('Limit reached, waiting');
         context$1$0.next = 21;
-        return _Promise2['default'].delay(WINDOW);
+        return _bluebird2['default'].delay(WINDOW);
 
       case 21:
         context$1$0.next = 23;
@@ -141,7 +141,7 @@ function query(lat, lon, distance) {
         return context$1$0.abrupt('return', context$1$0.sent);
 
       case 24:
-        throw context$1$0.t251;
+        throw context$1$0.t4;
 
       case 25:
       case 'end':
@@ -151,7 +151,7 @@ function query(lat, lon, distance) {
 }
 
 // Module initialization (at first load)
-api = _Promise2['default'].promisifyAll(api);
+api = _bluebird2['default'].promisifyAll(api);
 
 // Entry point
 
