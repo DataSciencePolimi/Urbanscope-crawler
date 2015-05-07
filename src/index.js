@@ -107,11 +107,10 @@ co( function*() {
     log.debug( 'Done grid %d', idx );
   }
   log.debug( 'Done all grids' );
+  closeMongo();
 } )
 .catch( err => {
   log.fatal( err, 'NUOOOOOOOOO' );
-} )
-.then( () => {
   closeMongo();
   log.info( 'Bye' );
 } );

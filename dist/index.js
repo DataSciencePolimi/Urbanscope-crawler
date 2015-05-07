@@ -284,15 +284,15 @@ _co2['default'](_regeneratorRuntime.mark(function callee$0$0() {
 
       case 59:
         log.debug('Done all grids');
+        _model.close();
 
-      case 60:
+      case 61:
       case 'end':
         return context$1$0.stop();
     }
   }, callee$0$0, this, [[18, 43, 47, 55], [25, 34], [48,, 50, 54]]);
 }))['catch'](function (err) {
   log.fatal(err, 'NUOOOOOOOOO');
-}).then(function () {
   _model.close();
   log.info('Bye');
 });

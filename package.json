@@ -6,11 +6,11 @@
   "author": "Volox",
   "license": "MIT",
   "scripts": {
-    "twitter": "node crawler.js twitter",
-    "instagram": "node crawler.js instagram",
+    "twitter": "node crawler.js twitter | bunyan -o short",
+    "instagram": "node crawler.js instagram | bunyan -o short",
     "compile": "gulp compile",
     "watch": "gulp watch",
-    "prepublish": "gulp compile"
+    "postinstall": "gulp compile"
   },
   "dependencies": {
     "babel-runtime": "5.x",
