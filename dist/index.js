@@ -294,7 +294,9 @@ _co2['default'](_regeneratorRuntime.mark(function callee$0$0() {
 }))['catch'](function (err) {
   log.fatal(err, 'NUOOOOOOOOO');
   _model.close();
+}).then(function () {
   log.info('Bye');
+  process.exit(0);
 });
 
 //  50 6F 77 65 72 65 64  62 79  56 6F 6C 6F 78
