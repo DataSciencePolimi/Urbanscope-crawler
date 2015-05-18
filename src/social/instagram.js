@@ -80,7 +80,7 @@ function* query( lat, lon, distance ) {
     log.debug( 'Retrieved %d medias', medias.length );
     return yield wrapAll( medias );
   } catch( err ) {
-    if( err.code==='' ) { // Rate limit reached
+    if( err.code===429 ) { // Rate limit reached
       log.debug( 'Limit reached, waiting' );
       yield Promise.delay( WINDOW );
       return yield query( lat, lon, distance );

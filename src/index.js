@@ -1,5 +1,7 @@
 'use strict';
 // Load system modules
+import fs from 'fs';
+import path from 'path';
 
 // Load modules
 import co from 'co';
@@ -15,7 +17,8 @@ import nils from '../config/nils.json';
 
 
 // Constant declaration
-
+const GRID_FILE = path.join( __dirname, '..', 'config', 'generated-grids.json' );
+const STATUS_FILE = path.join( __dirname, '..', 'config', 'status.json' );
 
 // Module variables declaration
 let log = bunyan.createLogger( {
@@ -53,6 +56,17 @@ function* savePosts( posts ) {
     }
   }
 }
+function saveState( grid, coord ) {
+  let status = {
+    grid,
+    coord,
+  };
+
+  let json = JSON.stringify( status, null, 2 );
+  fs.writeFileSync( STATUS_FILE, json, 'utf8' );
+
+  return status;
+}
 
 // Module class declaration
 
@@ -66,25 +80,49 @@ co( function*() {
   // Setup mongo
   yield openMongo();
 
+  // Load status file
+  let status;
+  try {
+    status = require( STATUS_FILE );
+    log.info( 'Status loaded %d - %d', status.grid, status.coord );
+  } catch( err ) {
+    log.info( 'Status not present, creating one' );
+    status = saveState( 0, 0 );
+  }
 
-  // Create the grid points
-  log.debug( 'Generating point grids' );
-  let fc = grid.json( gridConfig );
-  let grids = fc.features.map( f => f.geometry.coordinates );
-  log.trace( 'Generated %d grids', grids.length );
+  // Create/load the grid points
+  let grids;
+  try {
+    log.trace( 'Loading from file "%s"', GRID_FILE );
+    grids = require( GRID_FILE );
+    log.debug( 'Grid loaded' );
+  } catch( err ) {
+    log.info( 'Generating grids' );
+    let fc = grid.json( gridConfig );
+    grids = fc.features.map( f => f.geometry.coordinates );
+    log.trace( 'Generated %d grids', grids.length );
+
+    let json = JSON.stringify( grids, null, 2 );
+
+    fs.writeFileSync( GRID_FILE, json, 'utf8' );
+  }
+
 
   // Load social
   let social = process.argv[ 2 ];
   log.trace( 'Loading module "%s"', social );
   let { query } = require( './social/'+social );
 
-  // Cycle over the grids
-  for( let idx=0; idx<gridConfig.length; idx++ ) {
-    let currentMpp = gridConfig[ idx ].mpp;
-    let points = grids[ idx ];
-    log.debug( 'Current grid %d with %d points', idx, points.length );
 
-    for( let coords of points ) {
+  // Cycle over the grids
+  for( let gridIndex=status.grid; gridIndex<gridConfig.length; gridIndex++ ) {
+    let currentMpp = gridConfig[ gridIndex ].mpp;
+    let points = grids[ gridIndex ];
+    log.debug( 'Current grid %d with %d points', gridIndex, points.length );
+
+    for( let coordIndex=status.coord; coordIndex<points.length; coordIndex++ ) {
+    // for( let coords of points ) {
+      let coords = points[ coordIndex ];
       let lat = coords[ 1 ];
       let lon = coords[ 0 ];
       let radius = currentMpp/1000;
@@ -102,9 +140,13 @@ co( function*() {
 
         log.error( err, 'Query failed: %s', err.message );
 
+      } finally {
+        // Save state
+        saveState( gridIndex, coordIndex );
       }
     }
-    log.debug( 'Done grid %d', idx );
+    log.debug( 'Done grid %d', gridIndex );
+    status.coord = 0; // Rest coodinates index
   }
   log.debug( 'Done all grids' );
   closeMongo();

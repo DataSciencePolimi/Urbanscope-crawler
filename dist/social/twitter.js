@@ -120,9 +120,9 @@ function query(lat, lon, radius) {
 
       case 13:
         context$1$0.prev = 13;
-        context$1$0.t5 = context$1$0['catch'](2);
+        context$1$0.t24 = context$1$0['catch'](2);
 
-        if (!(context$1$0.t5.code === 88)) {
+        if (!(context$1$0.t24.code === 88)) {
           context$1$0.next = 22;
           break;
         }
@@ -140,7 +140,7 @@ function query(lat, lon, radius) {
         return context$1$0.abrupt('return', context$1$0.sent);
 
       case 22:
-        throw context$1$0.t5;
+        throw context$1$0.t24;
 
       case 23:
       case 'end':

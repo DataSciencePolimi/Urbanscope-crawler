@@ -10,6 +10,14 @@ var marked0$0 = [savePosts].map(_regeneratorRuntime.mark);
 
 // Load system modules
 
+var _fs = require('fs');
+
+var _fs2 = _interopRequireDefault(_fs);
+
+var _path = require('path');
+
+var _path2 = _interopRequireDefault(_path);
+
 // Load modules
 
 var _co = require('co');
@@ -47,6 +55,8 @@ var _configNilsJson2 = _interopRequireDefault(_configNilsJson);
 'use strict';
 
 // Constant declaration
+var GRID_FILE = _path2['default'].join(__dirname, '..', 'config', 'generated-grids.json');
+var STATUS_FILE = _path2['default'].join(__dirname, '..', 'config', 'status.json');
 
 // Module variables declaration
 var log = _bunyan2['default'].createLogger({
@@ -96,12 +106,12 @@ function savePosts(posts) {
 
       case 20:
         context$1$0.prev = 20;
-        context$1$0.t0 = context$1$0['catch'](9);
+        context$1$0.t20 = context$1$0['catch'](9);
 
-        if (context$1$0.t0.code === 11000) {
+        if (context$1$0.t20.code === 11000) {
           log.error('Post already present');
         } else {
-          log.error(context$1$0.t0, 'Cannot insert post');
+          log.error(context$1$0.t20, 'Cannot insert post');
         }
 
       case 23:
@@ -115,9 +125,9 @@ function savePosts(posts) {
 
       case 28:
         context$1$0.prev = 28;
-        context$1$0.t1 = context$1$0['catch'](5);
+        context$1$0.t21 = context$1$0['catch'](5);
         _didIteratorError = true;
-        _iteratorError = context$1$0.t1;
+        _iteratorError = context$1$0.t21;
 
       case 32:
         context$1$0.prev = 32;
@@ -149,6 +159,16 @@ function savePosts(posts) {
     }
   }, marked0$0[0], this, [[5, 28, 32, 40], [9, 20], [33,, 35, 39]]);
 }
+function saveState(grid, coord) {
+  var status = {
+    grid: grid,
+    coord: coord };
+
+  var json = JSON.stringify(status, null, 2);
+  _fs2['default'].writeFileSync(STATUS_FILE, json, 'utf8');
+
+  return status;
+}
 
 // Module class declaration
 
@@ -156,7 +176,7 @@ function savePosts(posts) {
 
 // Entry point
 _co2['default'](_regeneratorRuntime.mark(function callee$0$0() {
-  var fc, grids, social, _require, query, idx, currentMpp, points, _iteratorNormalCompletion2, _didIteratorError2, _iteratorError2, _iterator2, _step2, coords, lat, lon, radius, posts;
+  var status, grids, fc, json, social, _require, query, gridIndex, currentMpp, points, coordIndex, coords, lat, lon, radius, posts;
 
   return _regeneratorRuntime.wrap(function callee$0$0$(context$1$0) {
     while (1) switch (context$1$0.prev = context$1$0.next) {
@@ -165,132 +185,122 @@ _co2['default'](_regeneratorRuntime.mark(function callee$0$0() {
         return _model.open();
 
       case 2:
+        status = undefined;
 
-        // Create the grid points
-        log.debug('Generating point grids');
-        fc = _nodeGeojsonGrid2['default'].json(_configGridConfigJson2['default']);
-        grids = fc.features.map(function (f) {
-          return f.geometry.coordinates;
-        });
+        try {
+          status = require(STATUS_FILE);
+          log.info('Status loaded %d - %d', status.grid, status.coord);
+        } catch (err) {
+          log.info('Status not present, creating one');
+          status = saveState(0, 0);
+        }
 
-        log.trace('Generated %d grids', grids.length);
+        grids = undefined;
+
+        try {
+          log.trace('Loading from file "%s"', GRID_FILE);
+          grids = require(GRID_FILE);
+          log.debug('Grid loaded');
+        } catch (err) {
+          log.info('Generating grids');
+          fc = _nodeGeojsonGrid2['default'].json(_configGridConfigJson2['default']);
+
+          grids = fc.features.map(function (f) {
+            return f.geometry.coordinates;
+          });
+          log.trace('Generated %d grids', grids.length);
+
+          json = JSON.stringify(grids, null, 2);
+
+          _fs2['default'].writeFileSync(GRID_FILE, json, 'utf8');
+        }
 
         social = process.argv[2];
 
         log.trace('Loading module "%s"', social);
         _require = require('./social/' + social);
         query = _require.query;
-        idx = 0;
+        gridIndex = status.grid;
 
       case 11:
-        if (!(idx < _configGridConfigJson2['default'].length)) {
-          context$1$0.next = 59;
+        if (!(gridIndex < _configGridConfigJson2['default'].length)) {
+          context$1$0.next = 45;
           break;
         }
 
-        currentMpp = _configGridConfigJson2['default'][idx].mpp;
-        points = grids[idx];
+        currentMpp = _configGridConfigJson2['default'][gridIndex].mpp;
+        points = grids[gridIndex];
 
-        log.debug('Current grid %d with %d points', idx, points.length);
+        log.debug('Current grid %d with %d points', gridIndex, points.length);
 
-        _iteratorNormalCompletion2 = true;
-        _didIteratorError2 = false;
-        _iteratorError2 = undefined;
-        context$1$0.prev = 18;
-        _iterator2 = _getIterator(points);
+        coordIndex = status.coord;
 
-      case 20:
-        if (_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done) {
-          context$1$0.next = 41;
+      case 16:
+        if (!(coordIndex < points.length)) {
+          context$1$0.next = 40;
           break;
         }
 
-        coords = _step2.value;
+        coords = points[coordIndex];
         lat = coords[1];
         lon = coords[0];
         radius = currentMpp / 1000;
-        context$1$0.prev = 25;
-        context$1$0.next = 28;
+        context$1$0.prev = 21;
+        context$1$0.next = 24;
         return query(lat, lon, radius);
 
-      case 28:
+      case 24:
         posts = context$1$0.sent;
 
         log.trace('Returned %d posts', posts.length);
 
-        context$1$0.next = 32;
+        context$1$0.next = 28;
         return savePosts(posts);
 
-      case 32:
-        context$1$0.next = 38;
+      case 28:
+        context$1$0.next = 34;
         break;
+
+      case 30:
+        context$1$0.prev = 30;
+        context$1$0.t22 = context$1$0['catch'](21);
+
+        if (context$1$0.t22.code === 'ECONNREFUSED') {
+          log.error('Cannot connect %s', context$1$0.t22.message);
+        }
+
+        log.error(context$1$0.t22, 'Query failed: %s', context$1$0.t22.message);
 
       case 34:
         context$1$0.prev = 34;
-        context$1$0.t2 = context$1$0['catch'](25);
 
-        if (context$1$0.t2.code === 'ECONNREFUSED') {
-          log.error('Cannot connect %s', context$1$0.t2.message);
-        }
+        // Save state
+        saveState(gridIndex, coordIndex);
+        return context$1$0.finish(34);
 
-        log.error(context$1$0.t2, 'Query failed: %s', context$1$0.t2.message);
-
-      case 38:
-        _iteratorNormalCompletion2 = true;
-        context$1$0.next = 20;
+      case 37:
+        coordIndex++;
+        context$1$0.next = 16;
         break;
 
-      case 41:
-        context$1$0.next = 47;
-        break;
+      case 40:
+        log.debug('Done grid %d', gridIndex);
+        status.coord = 0; // Rest coodinates index
 
-      case 43:
-        context$1$0.prev = 43;
-        context$1$0.t3 = context$1$0['catch'](18);
-        _didIteratorError2 = true;
-        _iteratorError2 = context$1$0.t3;
-
-      case 47:
-        context$1$0.prev = 47;
-        context$1$0.prev = 48;
-
-        if (!_iteratorNormalCompletion2 && _iterator2['return']) {
-          _iterator2['return']();
-        }
-
-      case 50:
-        context$1$0.prev = 50;
-
-        if (!_didIteratorError2) {
-          context$1$0.next = 53;
-          break;
-        }
-
-        throw _iteratorError2;
-
-      case 53:
-        return context$1$0.finish(50);
-
-      case 54:
-        return context$1$0.finish(47);
-
-      case 55:
-        log.debug('Done grid %d', idx);
-
-      case 56:
-        idx++;
+      case 42:
+        gridIndex++;
         context$1$0.next = 11;
         break;
 
-      case 59:
+      case 45:
         log.debug('Done all grids');
         _model.close();
 
-      case 61:
+      case 47:
       case 'end':
         return context$1$0.stop();
     }
-  }, callee$0$0, this, [[18, 43, 47, 55], [25, 34], [48,, 50, 54]]);
+  }, callee$0$0, this, [[21, 30, 34, 37]]);
 }))['catch'](function (err) {
   log.fatal(err, 'NUOOOOOOOOO');
   _model.close();
@@ -303,7 +313,12 @@ _co2['default'](_regeneratorRuntime.mark(function callee$0$0() {
 // Create and save the post
 
 // Setup mongo
+
+// Load status file
+// Create/load the grid points
 // Load social
 
 // Cycle over the grids
+
+// for( let coords of points ) {
 //# sourceMappingURL=index.js.map
