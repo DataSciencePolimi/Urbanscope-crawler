@@ -20,8 +20,6 @@ var _mongorito = require('mongorito');
 
 var _mongorito2 = _interopRequireDefault(_mongorito);
 
-'use strict';
-
 // Load my modules
 
 // Constant declaration

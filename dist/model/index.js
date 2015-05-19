@@ -1,8 +1,8 @@
 'use strict';
 
-var _Object$defineProperty = require('babel-runtime/core-js/object/define-property')['default'];
-
 var _regeneratorRuntime = require('babel-runtime/regenerator')['default'];
+
+var _Object$defineProperty = require('babel-runtime/core-js/object/define-property')['default'];
 
 var _interopRequireDefault = require('babel-runtime/helpers/interop-require-default')['default'];
 
@@ -11,7 +11,6 @@ _Object$defineProperty(exports, '__esModule', {
 });
 
 var marked0$0 = [open].map(_regeneratorRuntime.mark);
-
 // Load system modules
 
 var _url = require('url');
@@ -37,8 +36,6 @@ var _post2 = _interopRequireDefault(_post);
 var _configMongoJson = require('../../config/mongo.json');
 
 var _configMongoJson2 = _interopRequireDefault(_configMongoJson);
-
-'use strict';
 
 // Constant declaration
 

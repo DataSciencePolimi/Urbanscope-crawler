@@ -17,10 +17,11 @@ import nils from '../config/nils.json';
 
 
 // Constant declaration
-const GRID_FILE = path.join( __dirname, '..', 'config', 'generated-grids.json' );
-const STATUS_FILE = path.join( __dirname, '..', 'config', 'status.json' );
+const CONFIG_FOLDER = path.join( __dirname, '..', 'config' );
+const GRID_FILE = path.join( CONFIG_FOLDER, 'generated-grids.json' );
 
 // Module variables declaration
+let STATUS_FILE;
 let log = bunyan.createLogger( {
   name: 'cralwer',
   level: 'trace',
@@ -80,6 +81,12 @@ co( function*() {
   // Setup mongo
   yield openMongo();
 
+  // Load social
+  let social = process.argv[ 2 ];
+  log.trace( 'Loading module "%s"', social );
+  let { query } = require( './social/'+social );
+  STATUS_FILE =  path.join( CONFIG_FOLDER, social+'-status.json' );
+
   // Load status file
   let status;
   try {
@@ -108,10 +115,6 @@ co( function*() {
   }
 
 
-  // Load social
-  let social = process.argv[ 2 ];
-  log.trace( 'Loading module "%s"', social );
-  let { query } = require( './social/'+social );
 
 
   // Cycle over the grids
@@ -149,6 +152,8 @@ co( function*() {
     status.coord = 0; // Rest coodinates index
   }
   log.debug( 'Done all grids' );
+
+  fs.unlinkSync( STATUS_FILE );
   closeMongo();
 } )
 .catch( err => {
@@ -157,7 +162,7 @@ co( function*() {
 } )
 .then( ()=> {
   log.info( 'Bye' );
-  process.exit(0);
+  process.exit( 0 );
 } );
 
 //  50 6F 77 65 72 65 64  62 79  56 6F 6C 6F 78

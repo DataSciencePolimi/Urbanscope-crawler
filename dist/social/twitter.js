@@ -2,9 +2,9 @@
 
 var _slicedToArray = require('babel-runtime/helpers/sliced-to-array')['default'];
 
-var _Object$defineProperty = require('babel-runtime/core-js/object/define-property')['default'];
-
 var _regeneratorRuntime = require('babel-runtime/regenerator')['default'];
+
+var _Object$defineProperty = require('babel-runtime/core-js/object/define-property')['default'];
 
 var _interopRequireDefault = require('babel-runtime/helpers/interop-require-default')['default'];
 
@@ -13,7 +13,6 @@ _Object$defineProperty(exports, '__esModule', {
 });
 
 var marked0$0 = [query].map(_regeneratorRuntime.mark);
-
 // Load system modules
 
 // Load modules
@@ -39,8 +38,6 @@ var _bluebird2 = _interopRequireDefault(_bluebird);
 var _configTwitterKeysJson = require('../../config/twitter-keys.json');
 
 var _configTwitterKeysJson2 = _interopRequireDefault(_configTwitterKeysJson);
-
-'use strict';
 
 // Constant declaration
 var MAX_RESULTS = 100;
@@ -69,7 +66,7 @@ function wrap(tweet) {
       return h.text;
     });
   }
-  var date = _moment2['default'](tweet.created_at, DATE_FORMAT, 'en'); // jshint ignore: line
+  var date = (0, _moment2['default'])(tweet.created_at, DATE_FORMAT, 'en'); // jshint ignore: line
 
   var post = {
     source: SOCIAL,
@@ -120,9 +117,9 @@ function query(lat, lon, radius) {
 
       case 13:
         context$1$0.prev = 13;
-        context$1$0.t24 = context$1$0['catch'](2);
+        context$1$0.t0 = context$1$0['catch'](2);
 
-        if (!(context$1$0.t24.code === 88)) {
+        if (!(context$1$0.t0.code === 88)) {
           context$1$0.next = 22;
           break;
         }
@@ -140,7 +137,7 @@ function query(lat, lon, radius) {
         return context$1$0.abrupt('return', context$1$0.sent);
 
       case 22:
-        throw context$1$0.t24;
+        throw context$1$0.t0;
 
       case 23:
       case 'end':

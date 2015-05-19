@@ -2,9 +2,9 @@
 
 var _slicedToArray = require('babel-runtime/helpers/sliced-to-array')['default'];
 
-var _Object$defineProperty = require('babel-runtime/core-js/object/define-property')['default'];
-
 var _regeneratorRuntime = require('babel-runtime/regenerator')['default'];
+
+var _Object$defineProperty = require('babel-runtime/core-js/object/define-property')['default'];
 
 var _interopRequireDefault = require('babel-runtime/helpers/interop-require-default')['default'];
 
@@ -13,7 +13,6 @@ _Object$defineProperty(exports, '__esModule', {
 });
 
 var marked0$0 = [query].map(_regeneratorRuntime.mark);
-
 // Load system modules
 
 // Load modules
@@ -39,8 +38,6 @@ var _bluebird2 = _interopRequireDefault(_bluebird);
 var _configInstagramKeysJson = require('../../config/instagram-keys.json');
 
 var _configInstagramKeysJson2 = _interopRequireDefault(_configInstagramKeysJson);
-
-'use strict';
 
 // Constant declaration
 var MAX_RESULTS = 100; // 33 in reality
@@ -121,9 +118,9 @@ function query(lat, lon, distance) {
 
       case 15:
         context$1$0.prev = 15;
-        context$1$0.t23 = context$1$0['catch'](0);
+        context$1$0.t0 = context$1$0['catch'](0);
 
-        if (!(context$1$0.t23.code === 429)) {
+        if (!(context$1$0.t0.code === 429)) {
           context$1$0.next = 24;
           break;
         }
@@ -141,7 +138,7 @@ function query(lat, lon, distance) {
         return context$1$0.abrupt('return', context$1$0.sent);
 
       case 24:
-        throw context$1$0.t23;
+        throw context$1$0.t0;
 
       case 25:
       case 'end':
