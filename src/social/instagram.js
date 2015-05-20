@@ -45,7 +45,7 @@ function wrap( media ) {
   let post = {
     source: SOCIAL,
     id: media.id,
-    text: media.caption,
+    text: media.caption? media.caption.text: '',
     date: date.toDate(),
     location: location? {
       type: 'Point',
