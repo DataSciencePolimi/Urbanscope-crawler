@@ -2,13 +2,13 @@
 // Load system modules
 
 // Load modules
-import moment from 'moment';
-import bunyan from 'bunyan';
-import ig from 'instagram-node';
-import Promise from 'bluebird';
+let moment = require( 'moment' );
+let bunyan = require( 'bunyan' );
+let ig = require( 'instagram-node' );
+let Promise = require( 'bluebird' );
 
 // Load my modules
-import apiKeys from '../../config/instagram-keys.json';
+let apiKeys = require( '../../config/instagram-keys.json' );
 
 
 
@@ -27,7 +27,7 @@ let log = bunyan.createLogger( {
   level: 'trace',
 } );
 let api = ig.instagram();
-log.trace( { apiKeys }, 'Using api keys' );
+log.trace( { apiKeys: apiKeys }, 'Using api keys' );
 api.use( apiKeys );
 
 
@@ -65,7 +65,9 @@ function wrap( media ) {
 function wrapAll( medias ) {
   log.trace( 'Wrapping %d media to posts', medias.length );
   let wrapped = medias.map( wrap );
-  let filtered = wrapped.filter( t => t.location );
+  let filtered = wrapped.filter(  function( t ) {
+    return t.location;
+  } );
   return filtered;
 }
 
@@ -73,10 +75,12 @@ function wrapAll( medias ) {
 function* query( lat, lon, distance ) {
   try {
     let options = {
-      distance,
+      distance: distance,
       count: MAX_RESULTS,
     };
-    let [ medias, rem, limit ] = yield api.media_searchAsync( lat, lon, options ); // jshint ignore: line
+    let results = yield api.media_searchAsync( lat, lon, options ); // jshint ignore: line
+    let medias = results[ 0 ];
+
     log.debug( 'Retrieved %d medias', medias.length );
     return yield wrapAll( medias );
   } catch( err ) {
@@ -98,6 +102,6 @@ api = Promise.promisifyAll( api );
 // Entry point
 
 // Exports
-export { query };
+module.exports.query = query;
 
 //  50 6F 77 65 72 65 64  62 79  56 6F 6C 6F 78

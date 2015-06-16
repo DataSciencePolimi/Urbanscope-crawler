@@ -2,13 +2,13 @@
 // Load system modules
 
 // Load modules
-import moment from 'moment';
-import bunyan from 'bunyan';
-import Twitter from 'twit';
-import Promise from 'bluebird';
+let moment = require( 'moment' );
+let bunyan = require( 'bunyan' );
+let Twitter = require( 'twit' );
+let Promise = require( 'bluebird' );
 
 // Load my modules
-import apiKeys from '../../config/twitter-keys.json';
+let apiKeys = require( '../../config/twitter-keys.json' );
 
 
 // Constant declaration
@@ -27,7 +27,7 @@ let log = bunyan.createLogger( {
   level: 'trace',
 } );
 let api = new Twitter( apiKeys );
-log.trace( { apiKeys }, 'Using api keys' );
+log.trace( { apiKeys: apiKeys }, 'Using api keys' );
 
 
 
@@ -39,7 +39,9 @@ function wrap( tweet ) {
   log.trace( 'Converting tweet %s', tweet.id_str ); // jshint ignore: line
   let tags = [];
   if( tweet.entities ) {
-    tags = tweet.entities.hashtags.map( h => h.text );
+    tags = tweet.entities.hashtags.map( function( h ) {
+      return h.text;
+    } );
   }
   let date = moment( tweet.created_at, DATE_FORMAT, 'en' ); // jshint ignore: line
 
@@ -64,17 +66,23 @@ function wrap( tweet ) {
 function wrapAll( tweets ) {
   log.trace( 'Wrapping %d tweets to posts', tweets.length );
   let wrapped = tweets.map( wrap );
-  let filtered = wrapped.filter( t => t.location );
+  let filtered = wrapped.filter( function( t ) {
+    return t.location;
+  } );
   return filtered;
 }
 
 
 function* query( lat, lon, radius ) {
-  let geocode = `${lat},${lon},${radius}km`;
+  let geocode = lat+','+lon+','+radius+'km';
   log.trace( 'Geocode: %s', geocode );
 
   try {
-    let [ data ] = yield api.getAsync( 'search/tweets', { geocode, count: MAX_RESULTS } );
+    let results = yield api.getAsync( 'search/tweets', {
+      geocode: geocode,
+      count: MAX_RESULTS
+    } );
+    let data = results[ 0 ];
     let tweets = data.statuses;
     log.debug( 'Retrieved %d tweets', tweets.length );
     return wrapAll( tweets );
@@ -97,6 +105,6 @@ api = Promise.promisifyAll( api );
 // Entry point
 
 // Exports
-export { query };
+module.exports.query = query;
 
 //  50 6F 77 65 72 65 64  62 79  56 6F 6C 6F 78

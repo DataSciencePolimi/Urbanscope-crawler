@@ -4,30 +4,27 @@
   "description": "UrbanScope Crawler",
   "main": "crawler.js",
   "author": "Volox",
+  "private": true,
   "license": "MIT",
   "scripts": {
-    "twitter": "node crawler.js twitter | bunyan -o short",
-    "instagram": "node crawler.js instagram | bunyan -o short",
-    "compile": "gulp compile",
-    "watch": "gulp watch",
-    "postinstall": "gulp compile"
+    "twitter": "node --harmony crawler.js twitter | bunyan -o short",
+    "instagram": "node --harmony crawler.js instagram | bunyan -o short"
   },
+  "engines": {
+    "node": ">=0.11"
+  },
+  "engineStrict": true,
   "dependencies": {
-    "babel-runtime": "5.x",
     "bluebird": "2.x",
     "bunyan": "1.x",
     "co": "4.x",
     "instagram-node": "0.5.x",
     "lodash": "3.x",
     "moment": "2.x",
-    "mongorito": "1.x",
     "node-geojson-grid": "1.x",
+    "co-monk": "1.x",
+    "monk": "1.x",
     "turf": "2.x",
     "twit": "1.x"
-  },
-  "devDependencies": {
-    "gulp": "3.x",
-    "gulp-babel": "5.x",
-    "gulp-sourcemaps": "1.x"
   }
 }

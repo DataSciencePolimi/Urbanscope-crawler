@@ -1,19 +1,20 @@
 'use strict';
 // Load system modules
-import url from 'url';
+let url = require( 'url' );
 
 // Load modules
-import bunyan from 'bunyan';
-import Mongorito from 'mongorito';
+let bunyan = require( 'bunyan' );
+let monk = require( 'monk' );
+let wrap = require( 'co-monk' );
 
 // Load my modules
-import Post from './post';
-import config from '../../config/mongo.json';
+let config = require( '../../config/mongo.json' );
 
 // Constant declaration
-
+const COLLECTION_NAME = 'posts';
 
 // Module variables declaration
+let db, collection;
 let log = bunyan.createLogger( {
   name: 'model',
   level: 'trace',
@@ -21,6 +22,36 @@ let log = bunyan.createLogger( {
 
 
 // Module functions declaration
+function getDB() {
+  return db;
+}
+function getCollection( name ) {
+  name = name || COLLECTION_NAME;
+  return wrap( db.get( name ) );
+}
+function* open() {
+  let hostname = config.url;
+  let dbName = config.database;
+  let fullUrl = url.resolve( hostname+'/', dbName );
+
+  log.trace( fullUrl );
+  db = monk( fullUrl );
+  collection = getCollection();
+
+  // Create the indexes
+  collection.index( 'id', { index: true, unique: true } );
+  collection.index( 'date', { index: true } );
+  collection.index( 'author', { index: true } );
+  collection.index( 'authorId', { index: true } );
+  collection.index( 'source', { index: true } );
+  collection.index( { location: '2dsphere' } );
+
+  return db;
+}
+function close() {
+  db.close();
+}
+/*
 function* open() {
   let hostname = config.url;
   let dbName = config.database;
@@ -39,7 +70,7 @@ function* open() {
 function close() {
   Mongorito.disconnect();
 }
-
+*/
 // Module class declaration
 
 
@@ -48,7 +79,10 @@ function close() {
 // Entry point
 
 // Exports
-export { open, close };
+module.exports.open = open;
+module.exports.close = close;
+module.exports.getDB = getDB;
+module.exports.getCollection = getCollection;
 
 
 //  50 6F 77 65 72 65 64  62 79  56 6F 6C 6F 78

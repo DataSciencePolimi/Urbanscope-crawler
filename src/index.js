@@ -1,19 +1,20 @@
 'use strict';
 // Load system modules
-import fs from 'fs';
-import path from 'path';
+let fs = require( 'fs' );
+let path = require( 'path' );
 
 // Load modules
-import co from 'co';
-import bunyan from 'bunyan';
-import turf from 'turf';
-import grid from 'node-geojson-grid';
+let co = require( 'co' );
+let bunyan = require( 'bunyan' );
+let turf = require( 'turf' );
+let grid = require( 'node-geojson-grid' );
 
 // Load my modules
-import Post from './model/post';
-import { open as openMongo, close as closeMongo } from './model/';
-import gridConfig from '../config/grid-config.json';
-import nils from '../config/nils.json';
+let gridConfig = require( '../config/grid-config.json' );
+let nils = require( '../config/nils.json' );
+let openMongo = require( './model/' ).open;
+let closeMongo = require( './model/' ).close;
+let getCollection = require( './model/' ).getCollection;
 
 
 // Constant declaration
@@ -21,6 +22,7 @@ const CONFIG_FOLDER = path.join( __dirname, '..', 'config' );
 const GRID_FILE = path.join( CONFIG_FOLDER, 'generated-grids.json' );
 
 // Module variables declaration
+let db, collection;
 let STATUS_FILE;
 let log = bunyan.createLogger( {
   name: 'cralwer',
@@ -29,24 +31,33 @@ let log = bunyan.createLogger( {
 
 
 // Module functions declaration
+function toGeoPoint( coords, index ) {
+  return turf.point( coords, {
+    index: index
+  } );
+}
 function* savePosts( posts ) {
-  let points = turf.featurecollection( posts.map( (p,index) => {
-    return turf.point( p.location.coordinates, { index } );
-  } ) );
+  // Map coordinates to GeoJSON Point
+  let mappedPoints = posts.map( function( p, index ) {
+    return toGeoPoint( p.location.coordinates, index );
+  } );
+  // Create a feature collection, to be used with TURF
+  let fcPoints = turf.featurecollection( mappedPoints );
 
-  let taggedPoints = turf.tag( points, nils, 'ID_NIL', 'nil' );
+  // Tag all the points with the corresponding nil
+  let taggedPoints = turf.tag( fcPoints, nils, 'ID_NIL', 'nil' );
 
   for( let point of taggedPoints.features ) {
     try {
-      let { index, nil } = point.properties;
+      let index= point.properties.index;
+      let nil = point.properties.nil;
       let rawPost = posts[ index ];
 
       // Set the nil
       rawPost.nil = nil;
 
       // Create and save the post
-      let post = new Post( rawPost );
-      yield post.save();
+      yield collection.insert( rawPost );
 
     } catch( err ) {
       if( err.code===11000 ) {
@@ -59,8 +70,8 @@ function* savePosts( posts ) {
 }
 function saveState( grid, coord ) {
   let status = {
-    grid,
-    coord,
+    grid: grid,
+    coord: coord,
   };
 
   let json = JSON.stringify( status, null, 2 );
@@ -79,13 +90,14 @@ function saveState( grid, coord ) {
 co( function*() {
 
   // Setup mongo
-  yield openMongo();
+  db = yield openMongo();
+  collection = getCollection();
 
   // Load social
   let social = process.argv[ 2 ];
   log.trace( 'Loading module "%s"', social );
-  let { query } = require( './social/'+social );
-  STATUS_FILE =  path.join( CONFIG_FOLDER, social+'-status.json' );
+  let query = require( './social/'+social ).query;
+  STATUS_FILE = path.join( CONFIG_FOLDER, social+'-status.json' );
 
   // Load status file
   let status;
@@ -106,7 +118,9 @@ co( function*() {
   } catch( err ) {
     log.info( 'Generating grids' );
     let fc = grid.json( gridConfig );
-    grids = fc.features.map( f => f.geometry.coordinates );
+    grids = fc.features.map( function( f ) {
+      return f.geometry.coordinates;
+    } );
     log.trace( 'Generated %d grids', grids.length );
 
     let json = JSON.stringify( grids, null, 2 );
@@ -156,11 +170,11 @@ co( function*() {
   fs.unlinkSync( STATUS_FILE );
   closeMongo();
 } )
-.catch( err => {
+.catch( function( err ) {
   log.fatal( err, 'NUOOOOOOOOO' );
   closeMongo();
 } )
-.then( ()=> {
+.then( function() {
   log.info( 'Bye' );
   process.exit( 0 );
 } );
