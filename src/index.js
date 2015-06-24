@@ -6,11 +6,15 @@ let path = require( 'path' );
 // Load modules
 let co = require( 'co' );
 let bunyan = require( 'bunyan' );
+let _ = require( 'lodash' );
 let turf = require( 'turf' );
 let grid = require( 'node-geojson-grid' );
+let wrap = require( '@volox/social-post-wrapper' );
+let Cralwer = require( '@volox/social-crawler' );
 
 // Load my modules
 let gridConfig = require( '../config/grid-config.json' );
+let socials = require( '../config/socials.json' );
 let nils = require( '../config/nils.json' );
 let openMongo = require( './model/' ).open;
 let closeMongo = require( './model/' ).close;
@@ -20,13 +24,19 @@ let getCollection = require( './model/' ).getCollection;
 // Constant declaration
 const CONFIG_FOLDER = path.join( __dirname, '..', 'config' );
 const GRID_FILE = path.join( CONFIG_FOLDER, 'generated-grids.json' );
+const STATUS_FILE = path.join( CONFIG_FOLDER, 'status.json' );
+const QUEUE_CAPACITY = 30;
+const WRAP_OPTS = {
+  field: 'source',
+};
 
 // Module variables declaration
-let db, collection;
-let STATUS_FILE;
+let collection;
+let queue = [];
+let status = {};
 let log = bunyan.createLogger( {
   name: 'cralwer',
-  level: 'trace',
+  level: 'debug',
 } );
 
 
@@ -36,48 +46,93 @@ function toGeoPoint( coords, index ) {
     index: index
   } );
 }
-function* savePosts( posts ) {
+function getNilForPosts( posts ) {
   // Map coordinates to GeoJSON Point
-  let mappedPoints = posts.map( function( p, index ) {
+  let mappedPoints = _( posts )
+  .filter( 'location.coordinates' )
+  .map( function( p, index ) {
     return toGeoPoint( p.location.coordinates, index );
-  } );
+  } )
+  .value();
+
+  log.trace( 'Mapped points %d', mappedPoints.length );
+
   // Create a feature collection, to be used with TURF
   let fcPoints = turf.featurecollection( mappedPoints );
 
   // Tag all the points with the corresponding nil
   let taggedPoints = turf.tag( fcPoints, nils, 'ID_NIL', 'nil' );
 
-  for( let point of taggedPoints.features ) {
-    try {
-      let index= point.properties.index;
-      let nil = point.properties.nil;
-      let rawPost = posts[ index ];
+  return taggedPoints;
+}
 
-      // Set the nil
+function* savePosts( posts ) {
+  log.trace( 'Saving posts to the DB' );
+
+  let taggedPoints = getNilForPosts( posts );
+
+  for( let point of taggedPoints.features ) {
+    let index = point.properties.index;
+    let nil = point.properties.nil;
+    let rawPost = posts[ index ];
+
+    try {
+      // Set the nil ont the post
       rawPost.nil = nil;
 
-      // Create and save the post
+      // Try to create and save the post
       yield collection.insert( rawPost );
 
     } catch( err ) {
       if( err.code===11000 ) {
-        log.error( 'Post already present' );
+        log.trace( 'Post [%s] already present', rawPost.source );
       } else {
         log.error( err, 'Cannot insert post' );
       }
     }
   }
 }
-function saveState( grid, coord ) {
-  let status = {
-    grid: grid,
-    coord: coord,
-  };
+function queuePost( post ) {
+  queue.push( post );
 
-  let json = JSON.stringify( status, null, 2 );
-  fs.writeFileSync( STATUS_FILE, json, 'utf8' );
+  if( queue.length>=QUEUE_CAPACITY ) {
+    co( function* () {
+      yield savePosts( queue );
+    } )
+    .catch( function( err ) {
+      log.error( err, 'Unable to save the queued posts');
+    } )
+    .then( function() {
+      // Empty the queue
+      queue = [];
+    } )
+    ;
+  }
+}
+function saveState( socialId, index ) {
+  status[ socialId ] = index;
 
-  return status;
+  // TODO fix status file
+  fs.writeFileSync( STATUS_FILE, JSON.stringify( status ), 'utf8' );
+}
+function handleData( socialId, data ) {
+  let social = socialId.split( '_' )[ 0 ];
+  let post = wrap( data, social, WRAP_OPTS );
+  // TODO handle incoming data
+  log.trace( 'Data recieved {%s}[%s]', socialId, post.id );
+
+  queuePost( post );
+}
+function handleStatusUpdate( socialId, message, info ) {
+  // TODO handle status updates
+  let data = _.toArray( arguments ).slice( 3 );
+  log.trace( 'Status update for {%s} [%s]', socialId, message, info, data );
+
+  if( message==='done' && info==='grid' ) {
+    let lastPoint = data[ 1 ];
+    // Save the last DONE coordinate index
+    saveState( socialId, lastPoint );
+  }
 }
 
 // Module class declaration
@@ -90,93 +145,87 @@ function saveState( grid, coord ) {
 co( function*() {
 
   // Setup mongo
-  db = yield openMongo();
+  yield openMongo();
   collection = getCollection();
-
-  // Load social
-  let social = process.argv[ 2 ];
-  log.trace( 'Loading module "%s"', social );
-  let query = require( './social/'+social ).query;
-  STATUS_FILE = path.join( CONFIG_FOLDER, social+'-status.json' );
-
-  // Load status file
-  let status;
-  try {
-    status = require( STATUS_FILE );
-    log.info( 'Status loaded %d - %d', status.grid, status.coord );
-  } catch( err ) {
-    log.info( 'Status not present, creating one' );
-    status = saveState( 0, 0 );
-  }
 
   // Create/load the grid points
   let grids;
   try {
     log.trace( 'Loading from file "%s"', GRID_FILE );
     grids = require( GRID_FILE );
-    log.debug( 'Grid loaded' );
+    log.debug( '%d grids loaded', grids.length );
   } catch( err ) {
     log.info( 'Generating grids' );
     let fc = grid.json( gridConfig );
-    grids = fc.features.map( function( f ) {
-      return f.geometry.coordinates;
-    } );
+    grids = _.map( fc.features, 'geometry.coordinates' );
     log.trace( 'Generated %d grids', grids.length );
 
     let json = JSON.stringify( grids, null, 2 );
-
     fs.writeFileSync( GRID_FILE, json, 'utf8' );
   }
 
-
-
-
-  // Cycle over the grids
-  for( let gridIndex=status.grid; gridIndex<gridConfig.length; gridIndex++ ) {
-    let currentMpp = gridConfig[ gridIndex ].mpp;
-    let points = grids[ gridIndex ];
-    log.debug( 'Current grid %d with %d points', gridIndex, points.length );
-
-    for( let coordIndex=status.coord; coordIndex<points.length; coordIndex++ ) {
-    // for( let coords of points ) {
-      let coords = points[ coordIndex ];
-      let lat = coords[ 1 ];
-      let lon = coords[ 0 ];
-      let radius = currentMpp/1000;
-
-      try {
-        let posts = yield query( lat, lon, radius );
-        log.trace( 'Returned %d posts', posts.length );
-
-        yield savePosts( posts );
-
-      } catch( err ) {
-        if( err.code==='ECONNREFUSED' ) {
-          log.error( 'Cannot connect %s', err.message );
-        }
-
-        log.error( err, 'Query failed: %s', err.message );
-
-      } finally {
-        // Save state
-        saveState( gridIndex, coordIndex );
-      }
-    }
-    log.debug( 'Done grid %d', gridIndex );
-    status.coord = 0; // Rest coodinates index
+  status = {};
+  try {
+    status = require( STATUS_FILE );
+  } catch( err ) {
+    // log.error( err );
   }
-  log.debug( 'Done all grids' );
 
-  fs.unlinkSync( STATUS_FILE );
-  closeMongo();
+  /*
+  // Map the social configuration to Crawler specific properties
+  socials.forEach( function( social ) {
+    // Get grid config
+    let gridCfg = social.grid;
+
+    // Map from "gridIndex" property to corresponding generated grid
+    let currentGrid = grids[ gridCfg.index ];
+    social.geojson = currentGrid.slice( gridCfg.from, gridCfg.to );
+    log.trace( 'Social %s for %s have a %d points grid', social.provider, social.id, social.geojson.length );
+
+  } );
+  */
+
+  let opts = {
+    radius: gridConfig[ 2 ].mpp,
+  };
+  let cralwer = new Cralwer( socials, opts );
+  function runLoop() {
+    cralwer.run( 'geo', grids[ 2 ], null, status );
+  }
+
+  // Log related events
+  cralwer.on( 'log.trace', log.trace.bind( log ) );
+  cralwer.on( 'log.debug', log.debug.bind( log ) );
+  cralwer.on( 'log.info', log.info.bind( log ) );
+  cralwer.on( 'log.warn', log.warn.bind( log ) );
+  cralwer.on( 'log.error', log.error.bind( log ) );
+  cralwer.on( 'log.fatal', log.fatal.bind( log ) );
+
+  // Data related events
+  cralwer.on( 'status', handleStatusUpdate );
+  cralwer.on( 'completed', runLoop );
+  cralwer.on( 'data', handleData );
+  cralwer.once( 'ready', runLoop );
+
+  /*
+  cralwer.once( 'ready', function() {
+    log.debug( 'Crawler ready' );
+
+    // First run
+    cralwer.run( 'geo', grids[ 2 ], {} );
+
+    cralwer.on( 'completed', function() {
+      log.debug( 'Crawler cycle completed' );
+      // Restart once completed
+      cralwer.start();
+    } );
+  } );
+  */
 } )
 .catch( function( err ) {
   log.fatal( err, 'NUOOOOOOOOO' );
   closeMongo();
 } )
-.then( function() {
-  log.info( 'Bye' );
-  process.exit( 0 );
-} );
+;
 
 //  50 6F 77 65 72 65 64  62 79  56 6F 6C 6F 78

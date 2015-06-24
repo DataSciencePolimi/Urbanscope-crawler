@@ -7,24 +7,19 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "twitter": "node --harmony crawler.js twitter | bunyan -o short",
-    "instagram": "node --harmony crawler.js instagram | bunyan -o short"
+    "crawler": "node --harmony crawler.js | bunyan -o short"
   },
   "engines": {
     "node": ">=0.11"
   },
   "engineStrict": true,
   "dependencies": {
-    "bluebird": "2.x",
+    "@volox/social-crawler": "0.3.x",
     "bunyan": "1.x",
     "co": "4.x",
-    "instagram-node": "0.5.x",
     "lodash": "3.x",
-    "moment": "2.x",
-    "node-geojson-grid": "1.x",
-    "co-monk": "1.x",
     "monk": "1.x",
-    "turf": "2.x",
-    "twit": "1.x"
+    "node-geojson-grid": "1.x",
+    "turf": "2.x"
   }
 }
