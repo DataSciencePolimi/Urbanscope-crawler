@@ -14,7 +14,8 @@
   },
   "engineStrict": true,
   "dependencies": {
-    "@volox/social-crawler": "0.3.x",
+    "@volox/social-crawler": "0.x",
+    "@volox/social-post-wrapper": "0.x",
     "bunyan": "1.x",
     "co": "4.x",
     "lodash": "3.x",
