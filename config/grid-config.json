@@ -6,7 +6,9 @@
     },
     "area": {
       "type": "Feature",
-      "properties": {},
+      "properties": {
+        "name": "EXPO2015 Milano"
+      },
       "geometry": {
         "type": "Polygon",
         "coordinates": [

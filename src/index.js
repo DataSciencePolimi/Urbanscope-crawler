@@ -10,7 +10,7 @@ let _ = require( 'lodash' );
 let turf = require( 'turf' );
 let grid = require( 'node-geojson-grid' );
 let wrap = require( '@volox/social-post-wrapper' );
-let Cralwer = require( '@volox/social-crawler' );
+let Crawler = require( '@volox/social-crawler' );
 
 // Load my modules
 let gridConfig = require( '../config/grid-config.json' );
@@ -33,9 +33,10 @@ const WRAP_OPTS = {
 // Module variables declaration
 let collection;
 let queue = [];
-let status = {};
+let status = [];
+let statusMap = {};
 let log = bunyan.createLogger( {
-  name: 'cralwer',
+  name: 'crawler',
   level: 'debug',
 } );
 
@@ -110,7 +111,8 @@ function queuePost( post ) {
   }
 }
 function saveState( socialId, index ) {
-  status[ socialId ] = index;
+  let statusIndex = statusMap[ socialId ];
+  status[ statusIndex ] = index;
 
   // TODO fix status file
   fs.writeFileSync( STATUS_FILE, JSON.stringify( status ), 'utf8' );
@@ -167,11 +169,11 @@ co( function*() {
   status = {};
   try {
     status = require( STATUS_FILE );
+    log.trace( 'Current status: ', status );
   } catch( err ) {
     // log.error( err );
   }
 
-  /*
   // Map the social configuration to Crawler specific properties
   socials.forEach( function( social ) {
     // Get grid config
@@ -179,45 +181,59 @@ co( function*() {
 
     // Map from "gridIndex" property to corresponding generated grid
     let currentGrid = grids[ gridCfg.index ];
+    let half = Math.floor( currentGrid.length/2 );
+    if( gridCfg.from==='half' ) gridCfg.from = half;
+    if( gridCfg.to==='half' ) gridCfg.to = half;
+
     social.geojson = currentGrid.slice( gridCfg.from, gridCfg.to );
+    social.radius = gridConfig[ gridCfg.index ].mpp;
+    social.paginate = false;
+
     log.trace( 'Social %s for %s have a %d points grid', social.provider, social.id, social.geojson.length );
-
   } );
-  */
 
-  let opts = {
-    radius: gridConfig[ 2 ].mpp,
-  };
-  let cralwer = new Cralwer( socials, opts );
-  function runLoop() {
-    cralwer.run( 'geo', grids[ 2 ], null, status );
+  let crawler = new Crawler( socials );
+  function runLoop( data ) {
+    if( _.isArray( data ) ) {
+      _.each( data, function( socialId, idx ) {
+        statusMap[ socialId ] = idx;
+      } );
+
+      log.debug( 'Status map ', statusMap );
+      log.info( 'Running first loop' );
+    } else {
+      log.info( 'Run "%s" completed, restarting', data );
+    }
+
+    // Start the crawling
+    crawler.run( 'geo', null, status );
   }
 
   // Log related events
-  cralwer.on( 'log.trace', log.trace.bind( log ) );
-  cralwer.on( 'log.debug', log.debug.bind( log ) );
-  cralwer.on( 'log.info', log.info.bind( log ) );
-  cralwer.on( 'log.warn', log.warn.bind( log ) );
-  cralwer.on( 'log.error', log.error.bind( log ) );
-  cralwer.on( 'log.fatal', log.fatal.bind( log ) );
+  crawler.on( 'log.trace', log.trace.bind( log ) );
+  crawler.on( 'log.debug', log.debug.bind( log ) );
+  crawler.on( 'log.info', log.info.bind( log ) );
+  crawler.on( 'log.warn', log.warn.bind( log ) );
+  crawler.on( 'log.error', log.error.bind( log ) );
+  crawler.on( 'log.fatal', log.fatal.bind( log ) );
 
   // Data related events
-  cralwer.on( 'status', handleStatusUpdate );
-  cralwer.on( 'completed', runLoop );
-  cralwer.on( 'data', handleData );
-  cralwer.once( 'ready', runLoop );
+  crawler.on( 'status', handleStatusUpdate );
+  crawler.on( 'completed', runLoop );
+  crawler.on( 'data', handleData );
+  crawler.once( 'ready', runLoop );
 
   /*
-  cralwer.once( 'ready', function() {
+  crawler.once( 'ready', function() {
     log.debug( 'Crawler ready' );
 
     // First run
-    cralwer.run( 'geo', grids[ 2 ], {} );
+    crawler.run( 'geo', grids[ 2 ], {} );
 
-    cralwer.on( 'completed', function() {
+    crawler.on( 'completed', function() {
       log.debug( 'Crawler cycle completed' );
       // Restart once completed
-      cralwer.start();
+      crawler.start();
     } );
   } );
   */
