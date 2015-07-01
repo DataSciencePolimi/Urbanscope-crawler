@@ -180,13 +180,24 @@ co( function*() {
     let gridCfg = social.grid;
 
     // Map from "gridIndex" property to corresponding generated grid
-    let currentGrid = grids[ gridCfg.index ];
+    let currentGrid = [];
+    if( _.isArray( gridCfg.index ) ) {
+      let mpp = 0;
+      for( let i=0; i<gridCfg.index.length; i++ ) {
+        let index = gridCfg.index[ i ];
+        mpp += gridConfig[ index ].mpp;
+        currentGrid = currentGrid.concat( grids[ index ] );
+      }
+      social.radius = mpp/gridCfg.index.length; // Mean of the radius
+    } else {
+      currentGrid = grids[ gridCfg.index ];
+      social.radius = gridConfig[ gridCfg.index ].mpp;
+    }
     let half = Math.floor( currentGrid.length/2 );
     if( gridCfg.from==='half' ) gridCfg.from = half;
     if( gridCfg.to==='half' ) gridCfg.to = half;
 
     social.geojson = currentGrid.slice( gridCfg.from, gridCfg.to );
-    social.radius = gridConfig[ gridCfg.index ].mpp;
     social.paginate = false;
 
     log.trace( 'Social %s for %s have a %d points grid', social.provider, social.id, social.geojson.length );
