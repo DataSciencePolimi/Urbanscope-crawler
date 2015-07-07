@@ -1,3 +1,22 @@
+/*
+var util = require('util');
+var memwatch = require('memwatch');
+var heapdump = require('heapdump');
+heapdump.writeSnapshot('./' + Date.now() + '.heapsnapshot');
+var hd;
+memwatch.on('leak', function(info) {
+ console.error(info);
+ if (!hd) {
+   hd = new memwatch.HeapDiff();
+ } else {
+   var diff = hd.end();
+   console.error(util.inspect(diff, true, null));
+   hd = null;
+ }
+});
+*/
+
+
 'use strict';
 // Load system modules
 let fs = require( 'fs' );
@@ -13,6 +32,7 @@ let wrap = require( '@volox/social-post-wrapper' );
 let Crawler = require( '@volox/social-crawler' );
 
 // Load my modules
+// let Queue = require( './queue.js' );
 let gridConfig = require( '../config/grid-config.json' );
 let socials = require( '../config/socials.json' );
 let nils = require( '../config/nils.json' );
@@ -25,7 +45,7 @@ let getCollection = require( './model/' ).getCollection;
 const CONFIG_FOLDER = path.join( __dirname, '..', 'config' );
 const GRID_FILE = path.join( CONFIG_FOLDER, 'generated-grids.json' );
 const STATUS_FILE = path.join( CONFIG_FOLDER, 'status.json' );
-const QUEUE_CAPACITY = 30;
+const QUEUE_CAPACITY = 100;
 const WRAP_OPTS = {
   field: 'source',
 };
@@ -33,6 +53,7 @@ const WRAP_OPTS = {
 // Module variables declaration
 let collection;
 let queue = [];
+// let queue = new Queue( QUEUE_CAPACITY );
 let status = [];
 let statusMap = {};
 let log = bunyan.createLogger( {
@@ -93,20 +114,20 @@ function* savePosts( posts ) {
     }
   }
 }
+
+function handleError( err ) {
+  log.error( err, 'Unable to save the queued posts');
+}
 function queuePost( post ) {
   queue.push( post );
 
   if( queue.length>=QUEUE_CAPACITY ) {
     co( function* () {
-      yield savePosts( queue );
-    } )
-    .catch( function( err ) {
-      log.error( err, 'Unable to save the queued posts');
-    } )
-    .then( function() {
-      // Empty the queue
+      let tQ = queue;
       queue = [];
+      yield* savePosts( tQ );
     } )
+    .catch( handleError )
     ;
   }
 }
