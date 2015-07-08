@@ -1,26 +1,9 @@
-/*
-var util = require('util');
-var memwatch = require('memwatch');
-var heapdump = require('heapdump');
-heapdump.writeSnapshot('./' + Date.now() + '.heapsnapshot');
-var hd;
-memwatch.on('leak', function(info) {
- console.error(info);
- if (!hd) {
-   hd = new memwatch.HeapDiff();
- } else {
-   var diff = hd.end();
-   console.error(util.inspect(diff, true, null));
-   hd = null;
- }
-});
-*/
-
-
 'use strict';
 // Load system modules
 let fs = require( 'fs' );
 let path = require( 'path' );
+let https = require( 'https' );
+let http = require( 'http' );
 
 // Load modules
 let co = require( 'co' );
@@ -45,7 +28,7 @@ let getCollection = require( './model/' ).getCollection;
 const CONFIG_FOLDER = path.join( __dirname, '..', 'config' );
 const GRID_FILE = path.join( CONFIG_FOLDER, 'generated-grids.json' );
 const STATUS_FILE = path.join( CONFIG_FOLDER, 'status.json' );
-const QUEUE_CAPACITY = 100;
+const QUEUE_CAPACITY = 1000;
 const WRAP_OPTS = {
   field: 'source',
 };
@@ -165,6 +148,9 @@ function handleStatusUpdate( socialId, message, info ) {
 
 
 // Entry point
+https.globalAgent.maxSockets = 20;
+http.globalAgent.maxSockets = 20;
+
 co( function*() {
 
   // Setup mongo
