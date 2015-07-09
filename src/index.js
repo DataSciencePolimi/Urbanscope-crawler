@@ -2,8 +2,6 @@
 // Load system modules
 let fs = require( 'fs' );
 let path = require( 'path' );
-let https = require( 'https' );
-let http = require( 'http' );
 
 // Load modules
 let co = require( 'co' );
@@ -41,7 +39,7 @@ let status = [];
 let statusMap = {};
 let log = bunyan.createLogger( {
   name: 'crawler',
-  level: 'debug',
+  level: 'trace',
 } );
 
 
@@ -72,7 +70,7 @@ function getNilForPosts( posts ) {
 }
 
 function* savePosts( posts ) {
-  log.trace( 'Saving posts to the DB' );
+  log.debug( 'Saving %d posts to the DB', posts.length );
 
   let taggedPoints = getNilForPosts( posts );
 
@@ -92,7 +90,7 @@ function* savePosts( posts ) {
       if( err.code===11000 ) {
         log.trace( 'Post [%s] already present', rawPost.source );
       } else {
-        log.error( err, 'Cannot insert post' );
+        throw err;
       }
     }
   }
@@ -105,10 +103,13 @@ function queuePost( post ) {
   queue.push( post );
 
   if( queue.length>=QUEUE_CAPACITY ) {
+    log.info( 'Queue capacity reached, saving posts' );
     co( function* () {
       let tQ = queue;
       queue = [];
-      yield* savePosts( tQ );
+      yield savePosts( tQ );
+      log.info( 'Posts saved' );
+      return;
     } )
     .catch( handleError )
     ;
@@ -116,7 +117,7 @@ function queuePost( post ) {
 }
 function saveState( socialId, index ) {
   let statusIndex = statusMap[ socialId ];
-  status[ statusIndex ] = index;
+  status[ statusIndex ] = Number( index );
 
   // TODO fix status file
   fs.writeFileSync( STATUS_FILE, JSON.stringify( status ), 'utf8' );
@@ -125,7 +126,7 @@ function handleData( socialId, data ) {
   let social = socialId.split( '_' )[ 0 ];
   let post = wrap( data, social, WRAP_OPTS );
   // TODO handle incoming data
-  log.trace( 'Data recieved {%s}[%s]', socialId, post.id );
+  log.debug( 'Data recieved {%s}[%s]', socialId, post.id );
 
   queuePost( post );
 }
@@ -148,9 +149,6 @@ function handleStatusUpdate( socialId, message, info ) {
 
 
 // Entry point
-https.globalAgent.maxSockets = 20;
-http.globalAgent.maxSockets = 20;
-
 co( function*() {
 
   // Setup mongo
@@ -239,7 +237,8 @@ co( function*() {
   crawler.on( 'status', handleStatusUpdate );
   crawler.on( 'completed', runLoop );
   crawler.on( 'data', handleData );
-  crawler.once( 'ready', runLoop );
+
+  runLoop( crawler.getInstanceIds() );
 
   /*
   crawler.once( 'ready', function() {
@@ -261,5 +260,10 @@ co( function*() {
   closeMongo();
 } )
 ;
+
+process.on('uncaughtException', function( err ) {
+  console.error( 'Caught exception: ', err );
+  log.fatal( err, 'FUUUUUUU' );
+} );
 
 //  50 6F 77 65 72 65 64  62 79  56 6F 6C 6F 78
