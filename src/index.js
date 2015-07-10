@@ -52,7 +52,6 @@ function toGeoPoint( coords, index ) {
 function getNilForPosts( posts ) {
   // Map coordinates to GeoJSON Point
   let mappedPoints = _( posts )
-  .filter( 'location.coordinates' )
   .map( function( p, index ) {
     return toGeoPoint( p.location.coordinates, index );
   } )
@@ -71,6 +70,8 @@ function getNilForPosts( posts ) {
 
 function* savePosts( posts ) {
   log.debug( 'Saving %d posts to the DB', posts.length );
+
+  posts = _( posts ).filter( 'location.coordinates' );
 
   let taggedPoints = getNilForPosts( posts );
 
