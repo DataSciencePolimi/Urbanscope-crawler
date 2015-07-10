@@ -16,8 +16,8 @@
 // Module initialization (at first load)
 
 // Entry point
-require( './memory' )();
-require( 'https' ).globalAgent.maxSockets = 100;
+// require( './memory' )();
+// require( 'https' ).globalAgent.maxSockets = 100;
 // require( 'http' ).globalAgent.maxSockets = 20;
 
 require( './src/index' );

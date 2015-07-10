@@ -238,8 +238,9 @@ co( function*() {
   crawler.on( 'status', handleStatusUpdate );
   crawler.on( 'completed', runLoop );
   crawler.on( 'data', handleData );
+  crawler.once( 'ready', runLoop );
 
-  runLoop( crawler.getInstanceIds() );
+  // runLoop( crawler.getInstanceIds() );
 
   /*
   crawler.once( 'ready', function() {
