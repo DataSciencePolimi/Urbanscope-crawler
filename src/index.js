@@ -172,7 +172,6 @@ co( function*() {
     fs.writeFileSync( GRID_FILE, json, 'utf8' );
   }
 
-  status = {};
   try {
     status = require( STATUS_FILE );
     log.trace( 'Current status: ', status );
@@ -220,6 +219,7 @@ co( function*() {
       log.info( 'Running first loop' );
     } else {
       log.info( 'Run "%s" completed, restarting', data );
+      status = status.map( function() { return 0; } );
     }
 
     // Start the crawling
