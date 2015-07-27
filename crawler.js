@@ -1,5 +1,7 @@
 'use strict';
 // Load system modules
+var https = require( 'https' );
+// var http = require( 'http' );
 
 // Load modules
 
@@ -16,9 +18,8 @@
 // Module initialization (at first load)
 
 // Entry point
-// require( './memory' )();
-// require( 'https' ).globalAgent.maxSockets = 100;
-// require( 'http' ).globalAgent.maxSockets = 20;
+https.globalAgent.options.keepAlive = true;
+https.globalAgent.options.maxSockets = 20;
 
 require( './src/index' );
 

@@ -3,8 +3,9 @@
 let url = require( 'url' );
 
 // Load modules
+let Promise = require( 'bluebird' );
 let bunyan = require( 'bunyan' );
-let monk = require( 'monk' );
+let MongoClient = require('mongodb').MongoClient;
 // let wrap = require( 'co-monk' );
 
 // Load my modules
@@ -28,7 +29,7 @@ function getDB() {
 function getCollection( name ) {
   name = name || COLLECTION_NAME;
   // return wrap( db.get( name ) );
-  return db.get( name );
+  return db.collection( name );
 }
 function* open() {
   let hostname = config.url;
@@ -36,18 +37,55 @@ function* open() {
   let fullUrl = url.resolve( hostname+'/', dbName );
 
   log.trace( fullUrl );
-  db = monk( fullUrl );
+  db = yield MongoClient.connect( fullUrl, {
+    promiseLibrary: Promise,
+  } );
   collection = getCollection();
 
   // Create the indexes
-  collection.index( 'id', { index: true, unique: true, background: true } );
-  collection.index( 'date', { index: true, background: true } );
-  collection.index( 'author', { index: true, background: true } );
-  collection.index( 'authorId', { index: true, background: true } );
-  collection.index( 'source', { index: true, background: true } );
-  collection.index( 'nil', { index: true, background: true } );
-  collection.index( 'lang', { index: true, background: true } );
-  collection.index( { location: '2dsphere' } );
+  yield collection.createIndexes( [
+    {
+      name: 'ID',
+      key: { id: 1 },
+      background: true,
+      unique: true,
+    },
+    {
+      name: 'Date',
+      key: { date: 1 },
+      background: true,
+    },
+    {
+      name: 'Author',
+      key: { author: 1 },
+      background: true,
+    },
+    {
+      name: 'Author ID',
+      key: { authorId: 1 },
+      background: true,
+    },
+    {
+      name: 'Source',
+      key: { source: 1 },
+      background: true,
+    },
+    {
+      name: 'NIL',
+      key: { nil: 1 },
+      background: true,
+    },
+    {
+      name: 'Language',
+      key: { lang: 1 },
+      background: true,
+    },
+    {
+      name: 'Location',
+      key: { location: '2dsphere' },
+      background: true,
+    },
+  ] );
 
   return db;
 }

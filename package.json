@@ -16,11 +16,14 @@
   "dependencies": {
     "@volox/social-crawler": "0.x",
     "@volox/social-post-wrapper": "0.x",
+    "bluebird": "2.x",
     "bunyan": "1.x",
     "co": "4.x",
     "lodash": "3.x",
-    "monk": "1.x",
+    "mongodb": "2.x",
     "node-geojson-grid": "1.x",
-    "turf": "2.x"
+    "turf-featurecollection": "1.x",
+    "turf-point": "2.x",
+    "turf-tag": "1.x"
   }
 }
