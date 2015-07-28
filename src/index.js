@@ -103,12 +103,12 @@ function ready( crawler, socialIds ) {
   try {
     fs.accessSync( DATE_FILE, fs.F_OK );
     log.trace( 'Start date file present', getStartDate() );
+    options.since = getStartDate();
   } catch( err ) {
     log.trace( 'Creating start date file' );
     saveStartDate();
   }
 
-  options.since = getStartDate();
 
   // Start the crawler
   run( crawler );
