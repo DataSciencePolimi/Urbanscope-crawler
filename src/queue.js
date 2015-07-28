@@ -56,7 +56,11 @@ Queue.prototype.save = function( queue ) {
   .catch( function( err ) {
     console.error( 'Save error: ', err );
   } );
-
+};
+Queue.prototype.forceSave = function() {
+  let q = this.queue;
+  this.queue = [];
+  this.save( q );
 };
 Queue.prototype.toGeoPoint = function( post, index ) {
   return point( post.location.coordinates, {
@@ -93,9 +97,7 @@ Queue.prototype._write = function( data, enc, cb ) { // eslint-disable-line no-u
   this.queue.push( data );
 
   if( this.queue.length>this.MAX ) {
-    let q = this.queue;
-    this.queue = [];
-    this.save( q );
+    this.forceSave();
   }
 
   return cb();
