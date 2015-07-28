@@ -17,12 +17,14 @@ let gridConfig = require( '../config/grid-config.json' );
 let socials = require( '../config/socials.json' );
 let openMongo = require( './model/' ).open;
 let closeMongo = require( './model/' ).close;
+let getLastID = require( './model/' ).getLastID;
 
 
 // Constant declaration
 const CONFIG_FOLDER = path.join( __dirname, '..', 'config' );
 const GRID_FILE = path.join( CONFIG_FOLDER, 'generated-grids.json' );
 const STATUS_FILE = path.join( CONFIG_FOLDER, 'status.json' );
+const DATE_FILE = path.join( CONFIG_FOLDER, 'start-date.json' );
 const QUEUE_CAPACITY = 50;
 const WRAP_OPTS = {
   field: 'source',
@@ -32,6 +34,7 @@ const WRAP_OPTS = {
 let queue = new Queue( QUEUE_CAPACITY );
 let status = [];
 let statusMap = {};
+let options = {};
 let log = bunyan.createLogger( {
   name: 'Crawler',
   level: 'trace',
@@ -42,12 +45,29 @@ let log = bunyan.createLogger( {
 function queuePost( post ) {
   queue.write( post );
 }
-function saveState( socialId, index ) {
+function saveState( forcedStatus ) {
+  // Use global status as default
+  forcedStatus = forcedStatus || status;
+
+  // Update the global status var
+  status = forcedStatus;
+
+  // Save to disk the status
+  fs.writeFileSync( STATUS_FILE, JSON.stringify( status ), 'utf8' );
+}
+function updateStatus( socialId, index ) {
   let statusIndex = statusMap[ socialId ];
   status[ statusIndex ] = Number( index );
 
-  // TODO fix status file
-  fs.writeFileSync( STATUS_FILE, JSON.stringify( status ), 'utf8' );
+  saveState();
+}
+function saveStartDate() {
+  let date = new Date();
+  fs.writeFileSync( DATE_FILE, date.toJSON(), 'utf8' );
+}
+function getStartDate() {
+  let strDate = fs.readFileSync( DATE_FILE, 'utf8' );
+  return new Date( strDate );
 }
 function handleData( socialId, data ) {
   let social = socialId.split( '_' )[ 0 ];
@@ -64,8 +84,48 @@ function handleStatusUpdate( socialId, message, info, args ) {
   if( message==='done' && info==='grid' ) {
     let lastPoint = args.end;
     // Save the last DONE coordinate index
-    saveState( socialId, lastPoint );
+    updateStatus( socialId, lastPoint );
   }
+}
+function run( crawler ) {
+
+  // Start the crawling
+  crawler.run( 'geo', options, status );
+}
+function ready( crawler, socialIds ) {
+  _.each( socialIds, function( socialId, idx ) {
+    statusMap[ socialId ] = idx;
+  } );
+
+  log.debug( 'Status map ', statusMap );
+  log.info( 'Running first loop' );
+
+  try {
+    fs.accessSync( DATE_FILE, fs.F_OK );
+    log.trace( 'Start date file present', getStartDate() );
+  } catch( err ) {
+    log.trace( 'Creating start date file' );
+    saveStartDate();
+  }
+
+  options.since = getStartDate();
+
+  // Start the crawler
+  run( crawler );
+}
+function completed( crawler, runId ) {
+  log.info( 'Run id "%s" completed, restarting', runId );
+  // Save the last queued posts
+  queue.forceSave();
+
+  // Reset status
+  status = _.fill( status, 0 );
+  saveState();
+
+  options.since = getStartDate();
+  saveStartDate();
+
+  run( crawler );
 }
 
 // Module class declaration
@@ -103,60 +163,52 @@ co( function*() {
     // log.error( err );
   }
 
-  // Map the social configuration to Crawler specific properties
-  socials.forEach( function( social ) {
-    // Get grid config
-    let gridCfg = social.grid;
-
-    // Map from "gridIndex" property to corresponding generated grid
-    let currentGrid = [];
-    if( _.isArray( gridCfg.index ) ) {
-      let mpp = 0;
-      for( let i=0; i<gridCfg.index.length; i++ ) {
-        let index = gridCfg.index[ i ];
-        mpp += gridConfig[ index ].mpp;
-        currentGrid = currentGrid.concat( grids[ index ] );
-      }
-      social.radius = mpp/gridCfg.index.length; // Mean of the radiuses
-    } else {
-      currentGrid = grids[ gridCfg.index ];
-      social.radius = gridConfig[ gridCfg.index ].mpp;
+  let gridMapping = {};
+  _.each( socials, function( social ) {
+    if( social.grid ) {
+      let indexes = _.isArray( social.grid.index ) ? social.grid.index : [ social.grid.index ];
+      _.each( indexes, function( idx ) {
+        gridMapping[ idx ] = gridMapping[ idx ] || {
+          start: 0,
+          count: 0,
+        };
+        gridMapping[ idx ].count += 1;
+      } );
     }
-    let half = Math.floor( currentGrid.length/2 );
-    if( gridCfg.from==='half' ) gridCfg.from = half;
-    if( gridCfg.to==='half' ) gridCfg.to = half;
+  } );
+  log.trace( { map: gridMapping }, 'Grid mapping' );
 
-    social.geojson = currentGrid.slice( gridCfg.from, gridCfg.to );
-    // social.paginate = true; // FUUUK
+  _.each( socials, function( social ) {
+    if( social.grid ) {
+      let indexes = _.isArray( social.grid.index ) ? social.grid.index : [ social.grid.index ];
+      let socialGrid = [];
+      _.each( indexes, function( idx ) {
+        let map = gridMapping[ idx ];
+        let myGrid = grids[ idx ];
+        let size = Math.floor( myGrid.length/map.count );
+        let start = map.start;
+        let end = start + size;
+        log.trace( 'Grid %d( size %d) range: %d -> %d', idx, myGrid.length, start, end );
+        socialGrid = socialGrid.concat( myGrid.slice( start, end ) );
+        map.start = end;
+        log.trace( 'Grid config mpp %d', gridConfig[ idx ].mpp );
+      } );
 
-    log.trace( 'Social %s for %s have a %d points grid', social.provider, social.id, social.geojson.length );
+      social.geojson = socialGrid;
+      social.radius = _.sum( _( gridConfig )
+      .pick( indexes )
+      .map( 'mpp' )
+      .value() )/indexes.length;
+      log.trace( 'Social radius = %d', social.radius );
+    }
   } );
 
   let crawler = new Crawler( socials );
-  function runLoop() {
-    if( _.isArray( arguments[ 0 ] ) ) {
-      _.each( arguments[ 0 ], function( socialId, idx ) {
-        statusMap[ socialId ] = idx;
-      } );
-
-      log.debug( 'Status map ', statusMap );
-      log.info( 'Running first loop' );
-    } else {
-      log.info( 'Run "%s" completed, restarting', arguments[ 0 ] );
-      status = status.map( function() { return 0; } );
-      process.exit( 0 );
-    }
-
-    // Start the crawling
-    crawler.run( 'geo', {
-      // MAX_PAGES: Infinity,
-    }, status );
-  }
 
   // Log related events
   let crawlerLogger = log.child( {
     component: 'Manager',
-    level: 'info',
+    // level: 'trace',
   } );
   crawler.on( 'log.trace', crawlerLogger.trace.bind( crawlerLogger ) );
   crawler.on( 'log.debug', crawlerLogger.debug.bind( crawlerLogger ) );
@@ -167,9 +219,11 @@ co( function*() {
 
   // Data related events
   crawler.on( 'status', handleStatusUpdate );
-  crawler.on( 'completed', runLoop );
   crawler.on( 'data', handleData );
-  crawler.once( 'ready', runLoop );
+
+  // Handle ready and completed events
+  crawler.on( 'completed', _.partial( completed, crawler ) );
+  crawler.once( 'ready', _.partial( ready, crawler ) );
 
 } )
 .catch( function( err ) {
@@ -178,9 +232,9 @@ co( function*() {
 } )
 ;
 
-process.on('uncaughtException', function( err ) {
-  console.error( 'UNCAUGHT exception: ', err );
+process.on( 'uncaughtException', function( err ) {
   log.fatal( err, 'FUUUUUUU' );
+  console.error( 'UNCAUGHT exception: ', err );
   process.exit( 1 );
 } );
 
