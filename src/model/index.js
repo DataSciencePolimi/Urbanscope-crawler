@@ -31,6 +31,23 @@ function getCollection( name ) {
   // return wrap( db.get( name ) );
   return db.collection( name );
 }
+/*
+function getLastID() {
+  return getCollection()
+  .find()
+  .project( { id: 1, _id: 0 } )
+  .sort( { date: -1 } )
+  .limit( 1 )
+  .toArray()
+  .then( function( docs ) {
+    if( docs ) {
+      return ( docs[ 0 ] || {} ).id;
+    } else {
+      return null;
+    }
+  } );
+}
+*/
 function* open() {
   let hostname = config.url;
   let dbName = config.database;
@@ -104,6 +121,7 @@ module.exports.open = open;
 module.exports.close = close;
 module.exports.getDB = getDB;
 module.exports.getCollection = getCollection;
+// module.exports.getLastID = getLastID;
 
 
 //  50 6F 77 65 72 65 64  62 79  56 6F 6C 6F 78
