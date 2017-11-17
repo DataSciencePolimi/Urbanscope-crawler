@@ -60,6 +60,7 @@ function* open() {
   collection = getCollection();
 
   // Create the indexes
+  /*
   yield collection.createIndexes( [
     {
       name: 'ID',
@@ -103,7 +104,7 @@ function* open() {
       background: true,
     },
   ] );
-
+  */
   return db;
 }
 function close() {

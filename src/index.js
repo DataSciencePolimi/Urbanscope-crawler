@@ -37,7 +37,7 @@ let statusMap = {};
 let options = {};
 let log = bunyan.createLogger( {
   name: 'Crawler',
-  level: 'trace',
+  level: 'info',
 } );
 
 

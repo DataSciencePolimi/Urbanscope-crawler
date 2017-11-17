@@ -1,0 +1,40 @@
+[
+  {
+    "provider": "twitter",
+    "id": "urbanscope",
+    "keys": {
+      "key": "AYaV8r1emKOCzPTmzywhg7nUH",
+      "secret": "2VVWJzGurMZpUnvSNBeJK6olBfncyECFA0FK9IhBVeGsPoXdej",
+      "appOnly": true
+    },
+    "bulk": 50,
+    "grid": {
+      "index": [0,1]
+    }
+  },
+  {
+    "provider": "twitter",
+    "id": "urbanscope",
+    "keys": {
+      "key": "SnfCmfbeTpEwu2N2LP4AQ6Soi",
+      "secret": "QIsHzdl6BeSaU5jHcz6Y9ORhUKdQn29d6CJhIiHYptG9IIe68J",
+      "appOnly": true
+    },
+    "bulk": 50,
+    "grid": {
+      "index": 2
+    }
+  },
+  {
+    "provider": "instagram",
+    "id": "urbanscope",
+    "keys": {
+      "clientId": "f935cc7b279b456391f3579ed53992ea",
+      "clientSecret": "331e9c51a6834c6eb4730b08cef9d027"
+    },
+    "bulk": 50,
+    "grid": {
+      "index": [0,1,2]
+    }
+  }
+]
